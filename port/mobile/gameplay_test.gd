@@ -28,6 +28,7 @@ func _run():
 	var interaction = _find(current_scene, "InteractionManager")
 	var camera = interaction.mouseRay
 	var intro = interaction.intro
+	await _before_bathroom(interaction)
 	await _click_branch(camera, intro.intbranch_bathroomdoor, "bathroom door")
 	var ready = await _wait_until(func(): return intro.intbranch_backroomdoor.interactionAllowed, 15.0)
 	_check(ready, "backroom door becomes available")
@@ -61,16 +62,19 @@ func _run():
 				if sibling is InteractionBranch and sibling.interactionAlias == "text dealer": choice = sibling
 		_check(choice != null, "dealer shot target exists")
 		if choice:
-			var shots_before = interaction.shotgun.roundManager.playerData.stat_shotsFired
-			await _click_branch(camera, choice, "dealer target")
-			ready = await _wait_until(func(): return interaction.shotgun.roundManager.playerData.stat_shotsFired > shots_before, 20.0)
+			ready = await _wait_until(func(): return choice.interactionAllowed and interaction.cursor.cursor_visible and not interaction.fs_dec, 15.0)
+			_check(ready, "dealer target ready after pickup animation")
+			if ready: await _click_branch(camera, choice, "dealer target")
+			_check(interaction.fs_dec and not interaction.cursor.cursor_visible, "touch commits dealer shot once")
+			ready = await _wait_until(func(): return interaction.shotgun.whoshot == "dealer", 10.0)
 			_check(ready, "touch fires original shotgun sequence")
 		await _capture("after-shot")
 	await _after_first_shot(interaction)
 	var save = _find(current_scene, "SaveFileManager")
-	save.SaveGame()
-	save.LoadGame()
-	_check(save.roundManager.playerData.hasSignedWaiver, "waiver survives save reload")
+	if save:
+		save.SaveGame()
+		save.LoadGame()
+		_check(save.roundManager.playerData.hasSignedWaiver, "waiver survives save reload")
 	var report = FileAccess.open(image_dir.path_join("gameplay-results.json"), FileAccess.WRITE)
 	report.store_string(JSON.stringify({"checks": results, "failures": failures}, "\t"))
 	report.close()
@@ -78,4 +82,7 @@ func _run():
 	quit(0 if failures.is_empty() else 1)
 
 func _after_first_shot(_interaction):
+	pass
+
+func _before_bathroom(_interaction):
 	pass

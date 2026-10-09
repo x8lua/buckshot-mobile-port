@@ -12,6 +12,8 @@ fi
 "$GODOT" --headless --path game --export-release iOS "$PWD/build/export/BuckshotMobile.zip" \
     2>&1 | tee build/evidence/export.log
 test -d build/export/BuckshotMobile.xcodeproj
+cp build/export/BuckshotMobile.xcodeproj/project.pbxproj build/evidence/project.pbxproj
+plutil -lint build/export/BuckshotMobile.xcodeproj/project.pbxproj
 
 xcodebuild -project build/export/BuckshotMobile.xcodeproj -scheme BuckshotMobile \
     -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \

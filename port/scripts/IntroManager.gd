@@ -56,8 +56,8 @@ func _ready():
 	if (roundManager.playerData.playerEnteringFromDeath or roundManager.playerData.enteringFromTrueDeath): 
 		parent_pills.visible = false
 		allowingPills = false
-	if (!roundManager.playerData.playerEnteringFromDeath && !roundManager.playerData.enteringFromTrueDeath):
-		if (FileAccess.file_exists(unlocker.savepath)):
+	if MobileRuntime.enabled or (!roundManager.playerData.playerEnteringFromDeath && !roundManager.playerData.enteringFromTrueDeath):
+		if MobileRuntime.enabled or FileAccess.file_exists(unlocker.savepath):
 			parent_pills.visible = true
 			crtManager.SetCRT(true)
 			allowingPills = true
@@ -244,9 +244,9 @@ func SelectedPill(selected : bool):
 	btn_bathroomdoor.visible = true
 	if(!selected): 
 		intbranch_pillbottle.interactionAllowed = true
-		intbranch_crt.interactionAllowed = true
+		intbranch_crt.interactionAllowed = GlobalVariables.using_steam
 		btn_pills.visible = true
-		btn_screen.visible = true
+		btn_screen.visible = GlobalVariables.using_steam
 		anim_pillflicker.play("flicker pill")
 	if (cursor.controller_active): btn_bathroomdoor.grab_focus()
 	controller.previousFocus = btn_bathroomdoor

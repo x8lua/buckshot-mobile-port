@@ -266,6 +266,7 @@ func begin_name_entry(signature: Node):
 	_name_edit.text = ""
 	_name_error.text = ""
 	_name_dialog.popup_centered()
+	_name_dialog.position.y = int(_safe_bounds.position.y + 64)
 	_name_edit.grab_focus.call_deferred()
 
 func _submit_name():

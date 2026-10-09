@@ -271,8 +271,14 @@ var debug_match_customization = {
 }
 
 func _ready():
+	# Recovery retained the tables but omitted the single-player registration list.
+	for sheet in ["Sheet26", "Sheet47"]:
+		for locale in ["EN", "BR", "DE", "EE", "ES LATAM", "ES", "FR", "IT", "JA", "KO", "PL", "PT", "RU", "TR", "UA", "ZHS", "ZHT"]:
+			var path = "res://localization/Buckshot Roulette - Localization Sheet - " + sheet + "." + locale + ".translation"
+			var table = load(path)
+			if table is Translation: TranslationServer.add_translation(table)
 	if using_steam: currentVersion = currentVersion_nr + versuffix_steam
-	else: currentVersion = currentVersion_nr + versuffix_itch
+	else: currentVersion = currentVersion_nr + " (OFFLINE PORT)"
 	debug_round_index_to_end_game_at = 2
 	original_volume_linear_interaction = db_to_linear(AudioServer.get_bus_volume_db(3))
 	original_volume_linear_music = db_to_linear(AudioServer.get_bus_volume_db(1))

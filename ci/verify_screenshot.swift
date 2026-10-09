@@ -6,7 +6,8 @@ let imageURL = URL(fileURLWithPath: CommandLine.arguments[1])
 let image = NSImage(contentsOf: imageURL)!
 var rect = CGRect(origin: .zero, size: image.size)
 let bitmap = image.cgImage(forProposedRect: &rect, context: nil, hints: nil)!
-for orientation: CGImagePropertyOrientation in [.up, .right, .down, .left] {
+let orientations: [CGImagePropertyOrientation] = [.up, .right, .down, .left]
+for orientation in orientations {
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = .accurate
     try VNImageRequestHandler(cgImage: bitmap, orientation: orientation).perform([request])

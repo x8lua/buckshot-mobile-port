@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   ios:
-    runs-on: macos-15-intel
+    runs-on: macos-15
     timeout-minutes: 55
     env:
       GODOT_VERSION: 4.7.2
@@ -32,8 +32,8 @@ jobs:
           curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o downloads/templates.tpz
           mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
           unzip -j -q downloads/templates.tpz templates/ios.zip templates/version.txt -d "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
-      - name: Build device IPA and verify simulators
-        run: bash ci/build_ios.sh
+      - name: Build ARM64 device IPA
+        run: bash ci/build_ios.sh device
       - name: Upload unsigned IPA
         if: always()
         uses: actions/upload-artifact@v4
@@ -44,11 +44,39 @@ jobs:
             build/BuckshotMobile-unsigned.ipa.sha256
           if-no-files-found: warn
           retention-days: 14
+      - name: Preserve exported project for simulator runner
+        uses: actions/upload-artifact@v4
+        with:
+          name: exported-xcode-project
+          path: build/export/
+          retention-days: 3
       - name: Upload build evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-evidence
+          path: build/evidence/
+          if-no-files-found: warn
+          retention-days: 14
+  simulator:
+    needs: ios
+    runs-on: macos-15-intel
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: exported-xcode-project
+          path: build/export/
+      - name: Build and verify iPhone and iPad simulators
+        run: bash ci/build_ios.sh simulator
+      - name: Upload simulator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-evidence
           path: build/evidence/
           if-no-files-found: warn
           retention-days: 14

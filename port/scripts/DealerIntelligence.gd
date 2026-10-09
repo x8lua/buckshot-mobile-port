@@ -383,14 +383,16 @@ func Shoot(who : String):
 		cameraShaker.Shake()
 		smoke.SpawnSmoke("barrel")
 		await(death.Kill("player", false, false))
-		if not is_inside_tree(): return
+		if not is_inside_tree() or roundManager.health_player <= 0: return
 		playerDied = true
 	if (currentRoundInChamber == "blank" && who == "self"): dealerCanGoAgain = true
 	#EJECTING SHELLS
 	await get_tree().create_timer(.4, false).timeout
+	if not is_inside_tree(): return
 	if (who == "player"): animator_shotgun.play("enemy eject shell_from player")
 	if (who == "self"): animator_shotgun.play("enemy eject shell_from self")
 	await get_tree().create_timer(1.7, false).timeout
+	if not is_inside_tree(): return
 	#shellSpawner.sequenceArray.remove_at(0)
 	EndDealerTurn(dealerCanGoAgain)
 

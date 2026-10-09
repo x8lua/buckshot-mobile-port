@@ -2,6 +2,7 @@
 set -euo pipefail
 mkdir -p build/evidence build/export
 
+if [[ "${1:-all}" != simulator ]]; then
 "$GODOT" --version | tee build/evidence/godot-version.txt
 xcodebuild -version | tee build/evidence/xcode-version.txt
 "$GODOT" --headless --path game --editor --import 2>&1 | tee build/evidence/import.log
@@ -30,7 +31,10 @@ mkdir -p build/package/Payload
 ditto "$APP" build/package/Payload/BuckshotMobile.app
 (cd build/package && /usr/bin/zip -qry ../BuckshotMobile-unsigned.ipa Payload)
 (cd build && shasum -a 256 BuckshotMobile-unsigned.ipa > BuckshotMobile-unsigned.ipa.sha256)
+fi
+if [[ "${1:-all}" == device ]]; then exit 0; fi
 
+xcodebuild -version | tee build/evidence/simulator-xcode-version.txt
 xcodebuild -project build/export/BuckshotMobile.xcodeproj -scheme BuckshotMobile \
     -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
     -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \

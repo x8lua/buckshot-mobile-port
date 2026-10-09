@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
@@ -33,9 +34,18 @@ for prefix in ("iPhone", "iPad"):
     time.sleep(35)
     screenshot = evidence / f"{prefix.lower()}-simulator.png"
     run("io", udid, "screenshot", str(screenshot))
+    container = Path(run("get_app_container", udid, bundle_id, "data").strip())
+    logs = []
+    for index, logfile in enumerate(container.rglob("godot*.log")):
+        target = evidence / f"{prefix.lower()}-runtime-{index}.log"
+        shutil.copy2(logfile, target)
+        logs.append(target.name)
+        content = logfile.read_text(encoding="utf-8", errors="replace")
+        if "SCRIPT ERROR:" in content or "ERROR: Failed to load" in content:
+            raise RuntimeError(f"Blocking runtime error in {target.name}")
     text = subprocess.check_output(["swift", "ci/verify_screenshot.swift", str(screenshot)], text=True)
     results.append({"device": device["name"], "udid": udid, "launch": launch.strip(),
-                    "screenshot": screenshot.name, "recognized_text": text.strip(),
+                    "screenshot": screenshot.name, "runtime_logs": logs, "recognized_text": text.strip(),
                     "verification": "App launch and original title rendered; no real-device performance claim"})
     run("terminate", udid, bundle_id)
     run("shutdown", udid)

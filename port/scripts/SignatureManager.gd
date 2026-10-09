@@ -38,13 +38,17 @@ func _ready():
 	if (roundManager.playerData.hasSignedWaiver == false): SetupWaiver()
 
 func BlinkMarker():
-	while(blinking):
+	while(blinking and is_inside_tree()):
 		marker.modulate.a = 0
 		await get_tree().create_timer(.3, false).timeout
+		if not is_inside_tree(): return
 		marker.modulate.a = 1
 		await get_tree().create_timer(.3, false).timeout
 		pass
 	pass
+
+func _exit_tree():
+	blinking = false
 
 func SetupWaiver():
 	origpos_shotgun = parent_shotgun.transform.origin

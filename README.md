@@ -10,7 +10,7 @@ Original game and assets are by Mike Klubnika. This repository is not an officia
 - IPA is unsigned and must be signed by a sideloading tool before installation.
 
 `port/` contains the source overlay. The private `recovered-assets` release stores
-`game-assets.zip` and its SHA256. CI extracts the archive and applies the source
+`single-player-assets.zip` and its SHA256. CI extracts the archive and applies the source
 overlay before importing, exporting, and compiling with Xcode.
 
 Run the **Build Unsigned iOS IPA** workflow to produce the IPA and build evidence.

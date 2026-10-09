@@ -21,6 +21,8 @@ func _run():
 	DirAccess.make_dir_recursive_absolute(image_dir)
 	await process_frame
 	var mobile = root.get_node("MobileRuntime")
+	for path in ["user://buckshotroulette_main_12.shell", "user://buckshotroulette_pills.shell", "user://buckshotroulette_playerstats.shell"]:
+		if FileAccess.file_exists(path): DirAccess.remove_absolute(path)
 	change_scene_to_file("res://scenes/main.tscn")
 	await create_timer(5.0).timeout
 	var interaction = _find(current_scene, "InteractionManager")

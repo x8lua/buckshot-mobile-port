@@ -13,13 +13,15 @@ def ignored(path):
     return path.name in {"gdre_export.log", "project.binary"} or path.suffix == ".tmp"
 
 
-def archive(project, destination, assets_only):
+def archive(project, destination, assets_only, manifest=None):
     count = 0
     with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as output:
         for source in sorted(project.rglob("*")):
             if not source.is_file():
                 continue
             relative = source.relative_to(project)
+            if manifest is not None and "res://" + relative.as_posix() not in manifest:
+                continue
             if ignored(relative):
                 continue
             if assets_only and (source.suffix == ".gd" or relative.parts[0] == "mobile"
@@ -39,9 +41,11 @@ def main():
     parser.add_argument("project", type=Path)
     parser.add_argument("destination", type=Path)
     parser.add_argument("--assets-only", action="store_true")
+    parser.add_argument("--manifest", type=Path)
     args = parser.parse_args()
     args.destination.parent.mkdir(parents=True, exist_ok=True)
-    print(json.dumps(archive(args.project, args.destination, args.assets_only), indent=2))
+    manifest = set(json.loads(args.manifest.read_text(encoding="utf-8"))) if args.manifest else None
+    print(json.dumps(archive(args.project, args.destination, args.assets_only, manifest), indent=2))
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ fi
 "$GODOT" --headless --path game --export-release iOS "$PWD/build/export/BuckshotMobile.zip" \
     2>&1 | tee build/evidence/export.log
 test -d build/export/BuckshotMobile.xcodeproj
+cp build/export/BuckshotMobile.xcodeproj/project.pbxproj build/evidence/project-original.pbxproj
+python3 ci/fix_xcode_project.py build/export/BuckshotMobile.xcodeproj/project.pbxproj | tee build/evidence/xcode-project-repairs.json
 cp build/export/BuckshotMobile.xcodeproj/project.pbxproj build/evidence/project.pbxproj
 plutil -lint build/export/BuckshotMobile.xcodeproj/project.pbxproj
 

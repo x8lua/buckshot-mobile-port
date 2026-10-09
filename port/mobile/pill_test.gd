@@ -20,3 +20,23 @@ func _before_bathroom(interaction):
 	ready = await _wait_until(func(): return intro.roundManager.endless and intro.intbranch_bathroomdoor.interactionAllowed and intro.cursor.cursor_visible, 6.0)
 	_check(ready, "pill enters original endless mode without story completion")
 	await _capture("endless-enabled")
+
+func _collect_grids(node: Node, output: Array):
+	if node is InteractionBranch and node.isGrid: output.append(node)
+	for child in node.get_children(): _collect_grids(child, output)
+
+func _before_first_round(interaction, gun):
+	var grids = []
+	_collect_grids(current_scene, grids)
+	for tick in range(180):
+		await create_timer(0.5).timeout
+		if gun.interactionAllowed: return
+		if not interaction.cursor.cursor_visible: continue
+		var candidates = [interaction.itemManager.interaction_intake] + grids
+		for branch in candidates:
+			if not branch.interactionAllowed or branch.interactionInvalid: continue
+			var point = _target_point(interaction.mouseRay, branch.get_parent())
+			if point.x >= 0:
+				_tap(point)
+				await process_frame
+				break

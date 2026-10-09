@@ -9,7 +9,13 @@ func _wait_until(predicate: Callable, seconds: float) -> bool:
 	return false
 
 func _click_branch(camera: Camera3D, branch: Node, label: String):
+	await physics_frame
+	await physics_frame
 	var point = _target_point(camera, branch.get_parent())
+	for retry in range(10):
+		if point.x >= 0: break
+		await create_timer(0.1).timeout
+		point = _target_point(camera, branch.get_parent())
 	_check(point.x >= 0, label + " visible collider")
 	if point.x >= 0:
 		_tap(point)
@@ -49,6 +55,7 @@ func _run():
 	var gun_branch = null
 	for branch in interaction.shotgun.perm.interactionBranchArray:
 		if branch.interactionAlias == "shotgun": gun_branch = branch
+	await _before_first_round(interaction, gun_branch)
 	ready = await _wait_until(func(): return gun_branch.interactionAllowed and interaction.cursor.cursor_visible, 60.0)
 	_check(ready, "first round exposes shotgun")
 	await _capture("first-round")
@@ -85,4 +92,7 @@ func _after_first_shot(_interaction):
 	pass
 
 func _before_bathroom(_interaction):
+	pass
+
+func _before_first_round(_interaction, _gun):
 	pass

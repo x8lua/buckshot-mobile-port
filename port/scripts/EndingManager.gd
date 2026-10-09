@@ -36,7 +36,20 @@ var waitingForInput = false
 #			ExitGame()
 #			waitingForInput = false
 
+func _input(event):
+	if not MobileRuntime.enabled or not waitingForInput:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and MobileRuntime.valid_tap:
+		var hovered = get_viewport().gui_get_hovered_control()
+		while hovered != null:
+			if hovered is BaseButton: return
+			hovered = hovered.get_parent() as Control
+		waitingForInput = false
+		ExitGame()
+		get_viewport().set_input_as_handled()
+
 func _unhandled_input(event):
+	if MobileRuntime.enabled: return
 	if (event.is_pressed()):
 		if (waitingForInput): 
 			ExitGame()
@@ -98,7 +111,7 @@ func ExitGame():
 	cntrl_ambience.FadeOut()
 	isActive = false
 	await get_tree().create_timer(4, false).timeout
-	var unlocked = FileAccess.file_exists(unlocker.savepath)
+	var unlocked = MobileRuntime.enabled or FileAccess.file_exists(unlocker.savepath)
 	if (unlocked): 
 		print("changing scene to: menu")
 		get_tree().change_scene_to_file("res://scenes/menu.tscn")

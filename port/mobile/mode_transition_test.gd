@@ -34,8 +34,14 @@ func _after_first_shot(interaction):
 				ready = await _wait_until(func(): return interaction.brief.ending.waitingForInput, 50.0)
 				_check(ready, "cashout reaches original congratulations")
 				await _capture("cashout-ending")
-		rounds.playerData.currentBatchIndex = 0
-	root.get_node("MobileRuntime")._return_to_menu()
+				rounds.playerData.currentBatchIndex = 0
+				if ready:
+					_tap(Vector2(480, 270))
+					ready = await _wait_until(func(): return current_scene != null and current_scene.scene_file_path == "res://scenes/menu.tscn", 20.0)
+					_check(ready, "cashout valid touch returns to menu")
+		if is_instance_valid(rounds): rounds.playerData.currentBatchIndex = 0
+	if current_scene == null or current_scene.scene_file_path != "res://scenes/menu.tscn":
+		root.get_node("MobileRuntime")._return_to_menu()
 	await process_frame
 	var report = FileAccess.open(image_dir.path_join("mode-transition-results.json"), FileAccess.WRITE)
 	report.store_string(JSON.stringify({"fixture": "Completed batch injected; no natural victory claim", "checks": results, "failures": failures}, "\t"))

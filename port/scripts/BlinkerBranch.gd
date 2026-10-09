@@ -14,10 +14,14 @@ func _ready():
 	pass
 
 func Loop():
-	while (looping):
+	while (looping and is_inside_tree()):
 		var delay = randf_range(delay_range1, delay_range2)
 		parent.set_surface_override_material(0, mat_1)
 		await get_tree().create_timer(delay, false).timeout
+		if not is_inside_tree(): return
 		parent.set_surface_override_material(0, mat_2)
 		await get_tree().create_timer(delay, false).timeout
 	pass
+
+func _exit_tree():
+	looping = false

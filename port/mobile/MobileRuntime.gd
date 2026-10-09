@@ -20,6 +20,7 @@ var _name_dialog: ConfirmationDialog
 var _name_edit: LineEdit
 var _name_error: Label
 var _signature: Node
+var _translation_controls = {}
 const SETTINGS_PATH = "user://buckshot_mobile.cfg"
 const TAP_SLOP = 18.0
 
@@ -30,6 +31,7 @@ func _ready():
 		return
 	Input.emulate_mouse_from_touch = false
 	Input.emulate_touch_from_mouse = false
+	_register_translations()
 	_load_settings()
 	_build_controls()
 	get_tree().node_added.connect(_on_node_added)
@@ -121,18 +123,20 @@ func _build_controls():
 	column.add_theme_constant_override("separation", 12)
 	_pause_root.add_child(column)
 	var heading = Label.new()
-	heading.text = tr("PAUSE")
+	_localize(heading, "PAUSE")
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_font_size_override("font_size", 26)
 	column.add_child(heading)
-	_resume_button = _command(column, tr("RESUME"), _toggle_pause)
+	_resume_button = _command(column, "RESUME", _toggle_pause)
 	var quality_label = Label.new()
-	quality_label.text = tr("QUALITY")
+	_localize(quality_label, "QUALITY")
 	column.add_child(quality_label)
 	var quality_selector = OptionButton.new()
 	quality_selector.add_item(tr("LOW"))
 	quality_selector.add_item(tr("STANDARD"))
 	quality_selector.selected = quality
+	quality_selector.set_meta("mobile_option_keys", ["LOW", "STANDARD"])
+	_translation_controls[quality_selector] = ""
 	quality_selector.custom_minimum_size.y = 48
 	quality_selector.item_selected.connect(_set_quality)
 	column.add_child(quality_selector)
@@ -149,9 +153,9 @@ func _build_controls():
 		Engine.max_fps = fps_limit
 		_save_settings())
 	column.add_child(fps_selector)
-	_command(column, tr("MAIN MENU"), _return_to_menu)
+	_command(column, "MAIN MENU", _return_to_menu)
 	_name_dialog = ConfirmationDialog.new()
-	_name_dialog.title = tr("NAME")
+	_localize(_name_dialog, "NAME")
 	_name_dialog.initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_PRIMARY_SCREEN
 	_name_dialog.dialog_hide_on_ok = false
 	_name_dialog.size = Vector2i(360, 160)
@@ -173,7 +177,7 @@ func _build_controls():
 
 func _command(parent: Node, label: String, action: Callable) -> Button:
 	var button = Button.new()
-	button.text = label
+	_localize(button, label)
 	button.custom_minimum_size.y = 48
 	button.add_theme_font_size_override("font_size", 20)
 	button.pressed.connect(action)
@@ -198,6 +202,9 @@ func _return_to_menu():
 func _notification(what):
 	if not enabled or not is_inside_tree():
 		return
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		for control in _translation_controls:
+			if is_instance_valid(control): _update_translation(control, _translation_controls[control])
 	if not OS.has_feature("ios"):
 		return
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -286,3 +293,27 @@ func _submit_name():
 	_name_dialog.hide()
 	_name_edit.release_focus()
 	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD): DisplayServer.virtual_keyboard_hide()
+
+func _localize(control: Node, key: String):
+	_translation_controls[control] = key
+	_update_translation(control, key)
+
+func _update_translation(control: Node, key: String):
+	if control is Window:
+		control.title = tr(key)
+	elif control is OptionButton:
+		var keys = control.get_meta("mobile_option_keys", [])
+		for index in keys.size(): control.set_item_text(index, tr(keys[index]))
+	else:
+		control.text = tr(key)
+
+func _register_translations():
+	var words = {
+		"EN": {"PAUSE": "PAUSE", "RESUME": "RESUME", "QUALITY": "QUALITY", "LOW": "LOW", "STANDARD": "STANDARD", "MAIN MENU": "MAIN MENU", "NAME": "NAME", "INVALID NAME": "Use 1-6 letters (A-Z)."},
+		"ZHT": {"PAUSE": "暫停", "RESUME": "繼續", "QUALITY": "畫質", "LOW": "低", "STANDARD": "標準", "MAIN MENU": "主選單", "NAME": "姓名", "INVALID NAME": "請輸入 1-6 個英文字母。"},
+		"ZHS": {"PAUSE": "暂停", "RESUME": "继续", "QUALITY": "画质", "LOW": "低", "STANDARD": "标准", "MAIN MENU": "主菜单", "NAME": "姓名", "INVALID NAME": "请输入 1-6 个英文字母。"}}
+	for locale in words:
+		var table = Translation.new()
+		table.set_locale(locale)
+		for key in words[locale]: table.add_message(key, words[locale][key])
+		TranslationServer.add_translation(table)

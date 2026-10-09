@@ -28,6 +28,10 @@ func _after_first_shot(interaction):
 		if not interaction.cursor.cursor_visible:
 			continue
 		var candidates = []
+		for branch in interaction.itemManager.items_dynamicInteractionArray:
+			if is_instance_valid(branch) and branch.interactionAllowed and not branch.interactionInvalid and not used_items.has(branch.itemName):
+				if branch.itemName in ["handcuffs", "cigarettes", "handsaw", "magnifying glass", "beer", "inverter", "burner phone"]:
+					candidates.append(branch)
 		if interaction.itemManager.interaction_intake.interactionAllowed:
 			candidates.append(interaction.itemManager.interaction_intake)
 		for branch in branches:
@@ -55,7 +59,7 @@ func _after_first_shot(interaction):
 			if alias != last_action:
 				print("AUTOPLAY ", alias, " batch=", rounds.playerData.currentBatchIndex, " round=", rounds.currentRound)
 			last_action = alias
-			if branch.interactionAlias == "item": used_items[alias] = true
+			if branch.interactionAlias == "item" and not branch.interactionAllowed: used_items[alias] = true
 			acted = true
 			stuck = 0.0
 			break

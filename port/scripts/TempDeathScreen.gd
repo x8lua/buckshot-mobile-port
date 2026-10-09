@@ -9,6 +9,8 @@ var fs = false
 
 func _ready():
 	if (isDeathScreen):
+		await get_tree().process_frame
+		if not is_inside_tree(): return
 		print("changing scene to: main")
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 

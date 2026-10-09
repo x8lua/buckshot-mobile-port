@@ -1,0 +1,19 @@
+name: Diagnose hosted runner availability
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: uname -a
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 3
+    steps:
+      - run: |
+          uname -a
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version

@@ -48,7 +48,10 @@ func Button_Main(tag : String):
 			print("changing scene to: death")
 			get_tree().change_scene_to_file("res://scenes/death.tscn")
 		"exit":
-			get_tree().quit()
+			if MobileRuntime.enabled:
+				get_tree().change_scene_to_file("res://scenes/menu.tscn")
+			else:
+				get_tree().quit()
 
 @export var bracket_door : Node3D
 @export var btn_door : Control

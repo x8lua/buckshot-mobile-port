@@ -13,12 +13,16 @@ func _ready():
 	Shake()
 
 func Shake():
-	while(looping):
+	while(looping and is_inside_tree()):
 		var randx = randf_range(offset1, offset2)
 		var randy = randf_range(offset1, offset2)
 		text.position = Vector2(randx, randy)
 		await get_tree().create_timer(delay, false).timeout
+		if not is_inside_tree(): return
 		text.position = origpos
 		await get_tree().create_timer(delay, false).timeout
 		pass
 	pass
+
+func _exit_tree():
+	looping = false

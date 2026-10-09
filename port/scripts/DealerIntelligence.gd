@@ -383,6 +383,7 @@ func Shoot(who : String):
 		cameraShaker.Shake()
 		smoke.SpawnSmoke("barrel")
 		await(death.Kill("player", false, false))
+		if not is_inside_tree(): return
 		playerDied = true
 	if (currentRoundInChamber == "blank" && who == "self"): dealerCanGoAgain = true
 	#EJECTING SHELLS

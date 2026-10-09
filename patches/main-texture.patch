@@ -1,0 +1,25 @@
+diff --git a/scenes/main.tscn b/scenes/main.tscn
+--- a/scenes/main.tscn
++++ b/scenes/main.tscn
+@@ -222,6 +222,7 @@
+ [ext_resource type="Material" uid="uid://bi6agyt3uqxw8" path="res://materials/mat_emission green.tres" id="220"]
+ [ext_resource type="Script" path="res://scripts/JankPreventer.gd" id="221"]
+ [ext_resource type="Texture2D" uid="uid://bw1ncgp4i3ckd" path="res://misc/defib charge broke6.png" id="222"]
++[ext_resource type="Texture2D" path="res://misc/defib charge png.png" id="mobile_defib_charge"]
+ [ext_resource type="AudioStream" uid="uid://buw4o7ia7e8kf" path="res://audio/round blinker wave.ogg" id="223"]
+ [ext_resource type="Material" uid="uid://vvopcnu6yb8s" path="res://misc/mat_round indicator.tres" id="224"]
+ [ext_resource type="Texture2D" uid="uid://bjo30fe7p8nnq" path="res://models/tabletop compartment origins2/tabletop compartment origins fix2_tabletop felt_without lines.png" id="225"]
+@@ -5145,12 +5146,9 @@
+ 
+ [sub_resource type="PlaneMesh" id="PlaneMesh_bphna"]
+ 
+-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_46076"]
+-load_path = "res://.godot/imported/defib charge png.png-4a08a71fed2b5a28d106417c9ba3f43d.s3tc.ctex"
+-
+ [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3yhar"]
+ transparency = 1
+-albedo_texture = SubResource("CompressedTexture2D_46076")
++albedo_texture = ExtResource("mobile_defib_charge")
+ emission_enabled = true
+ emission = Color(0, 1, 0, 1)
+ 

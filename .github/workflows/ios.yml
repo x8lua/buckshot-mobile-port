@@ -22,6 +22,7 @@ jobs:
           (cd downloads && shasum -a 256 -c checksums.sha256)
           python3 -m zipfile -e downloads/game-assets.zip game
           ditto port game
+          git apply --directory=game patches/main-texture.patch
       - name: Install pinned Godot and iOS templates
         run: |
           curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip" -o downloads/godot.zip

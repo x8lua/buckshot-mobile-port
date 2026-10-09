@@ -31,7 +31,7 @@ def archive(project, destination, assets_only, manifest=None):
             count += 1
     digest = hashlib.file_digest(destination.open("rb"), "sha256").hexdigest()
     destination.with_suffix(destination.suffix + ".sha256").write_text(
-        f"{digest}  {destination.name}\n", encoding="ascii")
+        f"{digest}  {destination.name}\n", encoding="ascii", newline="\n")
     return {"archive": destination.name, "files": count,
             "bytes": destination.stat().st_size, "sha256": digest}
 

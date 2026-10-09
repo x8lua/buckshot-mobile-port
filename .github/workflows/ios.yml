@@ -18,7 +18,8 @@ jobs:
         run: |
           mkdir -p downloads game
           gh release download recovered-assets --repo "$GITHUB_REPOSITORY" --pattern 'game-assets.zip*' --dir downloads
-          (cd downloads && shasum -a 256 -c game-assets.zip.sha256)
+          tr -d '\r' < downloads/game-assets.zip.sha256 > downloads/checksums.sha256
+          (cd downloads && shasum -a 256 -c checksums.sha256)
           python3 -m zipfile -e downloads/game-assets.zip game
           ditto port game
       - name: Install pinned Godot and iOS templates

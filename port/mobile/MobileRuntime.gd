@@ -158,7 +158,7 @@ func _build_controls():
 	_name_dialog.confirmed.connect(_submit_name)
 	_name_dialog.canceled.connect(func():
 		if _name_edit.has_focus(): _name_edit.release_focus()
-		DisplayServer.virtual_keyboard_hide())
+		if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD): DisplayServer.virtual_keyboard_hide())
 	add_child(_name_dialog)
 	var name_column = VBoxContainer.new()
 	_name_dialog.add_child(name_column)
@@ -285,4 +285,4 @@ func _submit_name():
 	_signature.GetInput("", "enter")
 	_name_dialog.hide()
 	_name_edit.release_focus()
-	DisplayServer.virtual_keyboard_hide()
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD): DisplayServer.virtual_keyboard_hide()

@@ -17,9 +17,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p downloads game
-          gh release download recovered-assets --repo "$GITHUB_REPOSITORY" --pattern 'single-player-assets.zip*' --dir downloads
-          (cd downloads && shasum -a 256 -c single-player-assets.zip.sha256)
-          python3 -m zipfile -e downloads/single-player-assets.zip game
+          gh release download recovered-assets --repo "$GITHUB_REPOSITORY" --pattern 'game-assets.zip*' --dir downloads
+          (cd downloads && shasum -a 256 -c game-assets.zip.sha256)
+          python3 -m zipfile -e downloads/game-assets.zip game
           ditto port game
       - name: Install pinned Godot and iOS templates
         run: |

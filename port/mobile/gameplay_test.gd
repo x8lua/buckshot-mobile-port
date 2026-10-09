@@ -66,6 +66,7 @@ func _run():
 			ready = await _wait_until(func(): return interaction.shotgun.roundManager.playerData.stat_shotsFired > shots_before, 20.0)
 			_check(ready, "touch fires original shotgun sequence")
 		await _capture("after-shot")
+	await _after_first_shot(interaction)
 	var save = _find(current_scene, "SaveFileManager")
 	save.SaveGame()
 	save.LoadGame()
@@ -75,3 +76,6 @@ func _run():
 	report.close()
 	print("GAMEPLAY_RESULT ", "PASS" if failures.is_empty() else "FAIL")
 	quit(0 if failures.is_empty() else 1)
+
+func _after_first_shot(_interaction):
+	pass

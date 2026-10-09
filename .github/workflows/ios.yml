@@ -1,0 +1,53 @@
+name: Build Unsigned iOS IPA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-15-arm64
+    timeout-minutes: 55
+    env:
+      GODOT_VERSION: 4.7.2
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download private game assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloads game
+          gh release download recovered-assets --repo "$GITHUB_REPOSITORY" --pattern 'game-assets.zip*' --dir downloads
+          (cd downloads && shasum -a 256 -c game-assets.zip.sha256)
+          python3 -m zipfile -e downloads/game-assets.zip game
+          ditto port game
+      - name: Install pinned Godot and iOS templates
+        run: |
+          curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip" -o downloads/godot.zip
+          unzip -q downloads/godot.zip -d downloads/godot
+          GODOT="$PWD/downloads/godot/Godot.app/Contents/MacOS/Godot"
+          chmod +x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o downloads/templates.tpz
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -j -q downloads/templates.tpz templates/ios.zip templates/version.txt -d "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+      - name: Build device IPA and verify simulators
+        run: bash ci/build_ios.sh
+      - name: Upload unsigned IPA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuckshotMobile-unsigned-IPA
+          path: |
+            build/BuckshotMobile-unsigned.ipa
+            build/BuckshotMobile-unsigned.ipa.sha256
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-evidence
+          path: build/evidence/
+          if-no-files-found: warn
+          retention-days: 14

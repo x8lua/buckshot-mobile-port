@@ -1,6 +1,7 @@
 extends "res://mobile/pill_test.gd"
 
 func _after_first_shot(interaction):
+	Engine.time_scale = 4.0
 	var rounds = interaction.shotgun.roundManager
 	var gun = null
 	for branch in interaction.shotgun.perm.interactionBranchArray:
@@ -40,3 +41,4 @@ func _after_first_shot(interaction):
 	report.store_string(JSON.stringify({"fixture": "Completed batch injected; no natural victory claim", "checks": results, "failures": failures}, "\t"))
 	report.close()
 	print("MODE_TRANSITION_RESULT ", "PASS" if failures.is_empty() else "FAIL")
+	Engine.time_scale = 1.0

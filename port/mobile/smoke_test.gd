@@ -30,6 +30,7 @@ func _capture(label: String):
 	_check(error == OK, "screenshot " + label)
 
 func _find(node: Node, type_name: String) -> Node:
+	if not is_instance_valid(node): return null
 	if node.get_class() == type_name: return node
 	if node.get_script() and node.get_script().get_global_name() == type_name: return node
 	for child in node.get_children():

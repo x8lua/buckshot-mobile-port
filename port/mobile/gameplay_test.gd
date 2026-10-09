@@ -64,16 +64,17 @@ func _run():
 		await create_timer(0.7).timeout
 		_check(not gun_branch.interactionAllowed, "shotgun pickup disables repeat pickup")
 		var choice = null
+		var target_alias = _shot_target_alias(interaction)
 		for child in interaction.decision.colliderArray:
 			for sibling in child.get_parent().get_children():
-				if sibling is InteractionBranch and sibling.interactionAlias == "text dealer": choice = sibling
+				if sibling is InteractionBranch and sibling.interactionAlias == target_alias: choice = sibling
 		_check(choice != null, "dealer shot target exists")
 		if choice:
 			ready = await _wait_until(func(): return choice.interactionAllowed and interaction.cursor.cursor_visible and not interaction.fs_dec, 15.0)
 			_check(ready, "dealer target ready after pickup animation")
 			if ready: await _click_branch(camera, choice, "dealer target")
 			_check(interaction.fs_dec and not interaction.cursor.cursor_visible, "touch commits dealer shot once")
-			ready = await _wait_until(func(): return interaction.shotgun.whoshot == "dealer", 10.0)
+			ready = await _wait_until(func(): return interaction.shotgun.whoshot == ("dealer" if target_alias == "text dealer" else "player"), 10.0)
 			_check(ready, "touch fires original shotgun sequence")
 		await _capture("after-shot")
 	await _after_first_shot(interaction)
@@ -96,3 +97,6 @@ func _before_bathroom(_interaction):
 
 func _before_first_round(_interaction, _gun):
 	pass
+
+func _shot_target_alias(_interaction) -> String:
+	return "text dealer"

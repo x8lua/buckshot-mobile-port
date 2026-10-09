@@ -3,6 +3,18 @@ extends "res://mobile/gameplay_test.gd"
 var used_items = {}
 var completed_story = false
 
+func _shot_target_alias(interaction) -> String:
+	return "text you" if interaction.shotgun.shellSpawner.sequenceArray[0] == "blank" else "text dealer"
+
+func _useful_item(branch, rounds) -> bool:
+	match branch.itemName:
+		"handcuffs": return not rounds.dealerCuffed
+		"handsaw": return not rounds.barrelSawedOff and not rounds.shellSpawner.sequenceArray.is_empty() and rounds.shellSpawner.sequenceArray[0] == "live"
+		"cigarettes": return true
+		"beer": return not used_items.has("beer")
+		"magnifying glass", "inverter", "burner phone": return not used_items.has(branch.itemName)
+	return false
+
 func _collect_branches(node: Node, output: Array):
 	if node is InteractionBranch: output.append(node)
 	for child in node.get_children(): _collect_branches(child, output)
@@ -19,7 +31,7 @@ func _after_first_shot(interaction):
 	var stuck = 0.0
 	for tick in range(2400):
 		# Accelerated integration run using the actual scenes and input path.
-		Engine.time_scale = 4.0
+		Engine.time_scale = 8.0
 		await create_timer(0.5).timeout
 		if not is_instance_valid(interaction):
 			await create_timer(1.0).timeout
@@ -41,7 +53,7 @@ func _after_first_shot(interaction):
 		for branch in [interaction.intro.intbranch_bathroomdoor, interaction.intro.intbranch_backroomdoor]:
 			if branch.interactionAllowed: candidates.append(branch)
 		for branch in interaction.itemManager.items_dynamicInteractionArray:
-			if is_instance_valid(branch) and branch.interactionAllowed and not branch.interactionInvalid and not used_items.has(branch.itemName):
+			if is_instance_valid(branch) and branch.interactionAllowed and not branch.interactionInvalid and _useful_item(branch, rounds):
 				if branch.itemName in ["handcuffs", "cigarettes", "handsaw", "magnifying glass", "beer", "inverter", "burner phone"]:
 					candidates.append(branch)
 		if interaction.itemManager.interaction_intake.interactionAllowed:
@@ -50,7 +62,7 @@ func _after_first_shot(interaction):
 			if not is_instance_valid(branch) or not branch.interactionAllowed or branch.interactionInvalid: continue
 			if branch.isGrid:
 				candidates.append(branch)
-			elif branch.interactionAlias == "item" and not used_items.has(branch.itemName):
+			elif branch.interactionAlias == "item" and _useful_item(branch, rounds):
 				if branch.itemName in ["handcuffs", "cigarettes", "handsaw", "magnifying glass", "beer", "inverter", "burner phone"]:
 					candidates.append(branch)
 		var target_alias = "text dealer"

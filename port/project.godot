@@ -11,11 +11,11 @@ config_version=5
 [application]
 
 config/name="Buckshot Roulette"
-run/main_scene="res://scenes/menu.tscn"
-config/features=PackedStringArray("4.7", "GL Compatibility")
 config/version="1.0.0"
+run/main_scene="res://scenes/menu.tscn"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="BuckshotMobile"
+config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/show_image=false
 boot_splash/image="res://misc/CR White splash.png"
@@ -38,9 +38,6 @@ file_logging/enable_file_logging=true
 window/size/viewport_width=960
 window/size/viewport_height=540
 window/stretch/mode="viewport"
-window/stretch/aspect="keep"
-window/handheld/orientation=0
-window/ios/hide_home_indicator=true
 mouse_cursor/custom_image="res://misc/cursor xp_point.png"
 mouse_cursor/custom_image_hotspot=Vector2(9, 0)
 
@@ -72,25 +69,25 @@ ui_focus_prev={
 }
 ui_left={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194319,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194319,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":13,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
 ui_right={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194321,"physical_keycode":4194321,"key_label":4194321,"unicode":0,"location":0,"echo":false,"script":null)
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194321,"physical_keycode":4194321,"key_label":4194321,"unicode":0,"location":0,"echo":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":14,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
 ui_up={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194320,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194320,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":11,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
 ui_down={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194322,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194322,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":12,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
@@ -583,7 +580,8 @@ debug_ctrl={
 [internationalization]
 
 locale/translation_remaps={}
-locale/translations=PackedStringArray("res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.BR.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.DE.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.EE.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.EN.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.ES LATAM.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.ES.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.FR.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.IT.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.JA.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.KO.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.PL.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.PT.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.RU.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.TR.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.UA.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.ZHS.translation", "res://multiplayer/mp_localization/Buckshot Roulette - Localization Sheet - multiplayer24.ZHT.translation")
+locale/translations=PackedStringArray("res://localization/Buckshot Roulette - Localization Sheet - Sheet47.EN.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.BR.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.DE.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.EE.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.ES LATAM.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.ES.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.FR.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.IT.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.JA.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.KO.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.PL.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.PT.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.RU.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.TR.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.UA.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.ZHS.translation", "res://localization/Buckshot Roulette - Localization Sheet - Sheet47.ZHT.translation")
+locale/fallback="EN"
 locale/locale_filter_mode=0
 
 [rendering]

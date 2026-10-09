@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   ios:
-    runs-on: macos-15-arm64
+    runs-on: macos-15
     timeout-minutes: 55
     env:
       GODOT_VERSION: 4.7.2

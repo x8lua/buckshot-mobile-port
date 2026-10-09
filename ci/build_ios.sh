@@ -35,6 +35,6 @@ xcodebuild -project build/export/BuckshotMobile.xcodeproj -scheme BuckshotMobile
     -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
     -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY='' DEVELOPMENT_TEAM='' IPHONEOS_DEPLOYMENT_TARGET=16.0 \
-    ARCHS=arm64 ONLY_ACTIVE_ARCH=NO build 2>&1 | tee build/evidence/simulator-build.log
+    ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO build 2>&1 | tee build/evidence/simulator-build.log
 python3 ci/simulator_check.py build/simulator/Build/Products/Release-iphonesimulator/BuckshotMobile.app
 

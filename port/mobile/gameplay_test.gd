@@ -79,7 +79,7 @@ func _run():
 		await _capture("after-shot")
 	await _after_first_shot(interaction)
 	var save = _find(current_scene, "SaveFileManager")
-	if save:
+	if save and is_instance_valid(save.roundManager):
 		save.SaveGame()
 		save.LoadGame()
 		_check(save.roundManager.playerData.hasSignedWaiver, "waiver survives save reload")

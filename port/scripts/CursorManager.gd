@@ -21,6 +21,7 @@ func SetCursor(isVisible : bool, playSound : bool):
 		cursor_visible = false
 
 func SetCursorImage(alias : String):
+	if MobileRuntime.enabled: return
 	match(alias):
 		"point": Input.set_custom_mouse_cursor(cursor_point, 0, Vector2(12, 0))
 		"hover": Input.set_custom_mouse_cursor(cursor_hover, 0, Vector2(9, 0))

@@ -435,12 +435,49 @@ func _brighten_mesh(mesh: MeshInstance3D, energy: float):
 		mesh.set_surface_override_material(surface, material)
 
 func _brighten_shell(shell: ShellClass):
-	if is_instance_valid(shell): _brighten_mesh(shell.mesh, 0.32)
+	if is_instance_valid(shell): _readable_shell_mesh(shell.mesh)
+
+func _readable_shell_mesh(mesh: MeshInstance3D):
+	if not is_instance_valid(mesh) or mesh.mesh == null: return
+	_brighten_mesh(mesh, 0.32) # Brass keeps its original shaded appearance.
+	if mesh.mesh.get_surface_count() < 2: return
+	var original = mesh.get_active_material(1)
+	if not original is StandardMaterial3D or original.has_meta("mobile_shell_color"): return
+	var material = original.duplicate() as StandardMaterial3D
+	# Only the colored casing ignores the dark room, including in the magnifier.
+	# Keep original red/blue albedo; no global exposure or illumination changes.
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.emission_enabled = false
+	material.set_meta("mobile_shell_color", true)
+	mesh.set_surface_override_material(1, material)
 
 func _brighten_dealer(dealer: DealerIntelligence):
 	if not is_instance_valid(dealer): return
-	_brighten_mesh(dealer.dealermesh_normal, 0.08)
-	_brighten_mesh(dealer.dealermesh_crushed, 0.08)
+	for mesh in [dealer.dealermesh_normal, dealer.dealermesh_crushed]:
+		_brighten_mesh(mesh, 0.025)
+		# Both original head meshes use surface 1 for grey teeth (Material.001).
+		var teeth = mesh.get_active_material(1).duplicate() as StandardMaterial3D
+		teeth.emission_energy_multiplier = 0.65
+		mesh.set_surface_override_material(1, teeth)
+	var animator = dealer.roundManager.animator_dealer
+	var visual = animator.get_parent() as Node3D
+	if not animator.has_meta("mobile_dealer_visibility"):
+		animator.set_meta("mobile_dealer_visibility", true)
+		animator.animation_started.connect(_dealer_animation_started.bind(visual))
+		animator.animation_finished.connect(_dealer_animation_finished.bind(visual))
+		# The original hide animation teleports the model instead of hiding it.
+		var returning = animator.get_animation("dealer return to table")
+		var table_position = returning.track_get_key_value(0, returning.track_get_key_count(0) - 1)
+		visual.visible = visual.position.distance_to(table_position) < 0.05
+
+func _dealer_animation_started(animation: StringName, visual: Node3D):
+	if not is_instance_valid(visual): return
+	if animation in [&"hide dealer", &"dealer fly away", &"dealer return to table"]:
+		visual.visible = false
+
+func _dealer_animation_finished(animation: StringName, visual: Node3D):
+	if is_instance_valid(visual) and animation == &"dealer return to table":
+		visual.visible = true
 
 func _attach_shell_replay(spawner: ShellSpawner):
 	if not is_instance_valid(spawner) or not spawner.spawnParent is MeshInstance3D: return
@@ -464,7 +501,7 @@ func _process(_delta):
 	if not enabled: return
 	_update_shell_batch()
 	if is_instance_valid(_shell_examine) and _shell_examine.shellParent.visible:
-		_brighten_mesh(_shell_examine.mesh, 0.32)
+		_readable_shell_mesh(_shell_examine.mesh)
 
 func _update_shell_batch():
 	if not is_instance_valid(_shell_spawner) or _shell_spawner.spawnedShellObjectArray.is_empty(): return

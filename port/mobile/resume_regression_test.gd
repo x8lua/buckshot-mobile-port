@@ -31,10 +31,35 @@ func run():
  check(rm.shellSpawner.sequenceArray == sequence,"remaining chamber preserved")
  if mobile.has_method("_can_replay_shells"):
   var dealer = rm.dealerAI.dealermesh_normal
-  check(dealer.get_active_material(0).emission_enabled and is_equal_approx(dealer.get_active_material(0).emission_energy_multiplier,0.08),"dealer local brightness only")
+  check(dealer.get_active_material(0).emission_enabled and is_equal_approx(dealer.get_active_material(0).emission_energy_multiplier,0.025),"dealer skin dimmed locally")
   var shell = rm.shellSpawner.spawnedShellObjectArray[0].get_child(0)
-  check(shell.mesh.get_active_material(1).emission_enabled and is_equal_approx(shell.mesh.get_active_material(1).emission_energy_multiplier,0.32),"shell color local brightness")
+  check(shell.mesh.get_active_material(1).shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED,"display shell color independent of environment")
   check(shell.mesh.get_active_material(1) != shell.mat_live,"shared original shell material untouched")
+  check(dealer.get_active_material(1).emission_enabled and is_equal_approx(dealer.get_active_material(1).emission_energy_multiplier,0.65),"teeth brighter than skin")
+  var examine = current_scene.get_node("standalone managers/shell examine")
+  for kind in ["live","blank"]:
+   rm.shellSpawner.sequenceArray[0] = kind
+   examine.SetupShell()
+   await process_frame
+   await process_frame
+   var color_mat = examine.mesh.get_active_material(1)
+   check(color_mat.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED,"magnifier "+kind+" color independent of environment")
+   check(color_mat.albedo_color == (examine.mat_live.albedo_color if kind == "live" else examine.mat_blank.albedo_color),"magnifier "+kind+" preserves distinct original color")
+   examine.RevertShell()
+  rm.shellSpawner.sequenceArray[0] = "live"
+  var visual = rm.animator_dealer.get_parent()
+  check(visual.visible,"dealer visible at table before shot")
+  rm.animator_dealer.play("dealer fly away")
+  await process_frame
+  await process_frame
+  check(not visual.visible,"dealer hidden on shot/retreat animation")
+  await create_timer(0.5).timeout
+  check(not visual.visible,"teleported dealer remains invisible at back")
+  rm.animator_dealer.play("dealer return to table")
+  await process_frame
+  check(not visual.visible,"dealer stays hidden while returning from back")
+  await create_timer(2.2).timeout
+  check(visual.visible,"dealer reappears only at table")
   check(mobile._can_replay_shells(),"one replay available on restored table")
   var cam = rm.camera.cam
   var panel = mobile._shell_panel

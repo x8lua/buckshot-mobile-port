@@ -48,6 +48,11 @@ func _ready():
 	parent_pills.visible = false
 	allowingPills = false
 	SetControllerState()
+	if MobileRuntime.enabled and MobileRuntime.has_checkpoint():
+		# A mobile checkpoint is already at the table; skip the bathroom intro.
+		viewblocker.visible = false
+		call_deferred("_resume_mobile_checkpoint")
+		return
 	await get_tree().create_timer(.5, false).timeout
 	if (roundManager.playerData.playerEnteringFromDeath && !roundManager.playerData.enteringFromTrueDeath):
 		RevivalBathroomStart()
@@ -61,6 +66,10 @@ func _ready():
 			parent_pills.visible = true
 			crtManager.SetCRT(true)
 			allowingPills = true
+
+func _resume_mobile_checkpoint():
+	await get_tree().create_timer(.15, false).timeout
+	BeginGame()
 
 var counting = false
 var count_current = 0

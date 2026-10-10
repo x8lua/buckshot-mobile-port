@@ -87,6 +87,18 @@ func _run():
 	await _capture("pause")
 	mobile._toggle_pause()
 	_check(not paused, "resume restores scene")
+	# Verify checkpoint serialization without relying on an animation frame.
+	var checkpoint_manager = _find(current_scene, "RoundManager")
+	if checkpoint_manager:
+		checkpoint_manager.roundArray = [checkpoint_manager]
+		checkpoint_manager.currentRound = 2
+		checkpoint_manager.health_player = 1
+		checkpoint_manager.health_opponent = 3
+		mobile.save_checkpoint(checkpoint_manager)
+		var checkpoint = mobile.load_checkpoint()
+		_check(int(checkpoint.get("current_round", -1)) == 2, "checkpoint round persists")
+		_check(int(checkpoint.get("health_player", -1)) == 1, "checkpoint health persists")
+		mobile.clear_checkpoint()
 	change_scene_to_file("res://scenes/main.tscn")
 	await create_timer(5.0).timeout
 	var interaction = _find(current_scene, "InteractionManager")

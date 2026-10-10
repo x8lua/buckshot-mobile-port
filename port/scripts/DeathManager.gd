@@ -138,6 +138,9 @@ func MedicineDeath():
 @export var ach : Achievement
 func MainDeathRoutine():
 	var loadingHeaven = false
+	if MobileRuntime.enabled:
+		# A death route has its own revival/save flow; never reopen a stale table checkpoint.
+		MobileRuntime.clear_checkpoint()
 	if (shotgunShooting.roundManager.endless):
 		if (rm.endscore != null):
 			if (rm.endscore > 1000000): ach.UnlockAchievement("ach10")

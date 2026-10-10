@@ -22,6 +22,7 @@ var _name_error: Label
 var _signature: Node
 var _translation_controls = {}
 const SETTINGS_PATH = "user://buckshot_mobile.cfg"
+const CHECKPOINT_PATH = "user://buckshot_mobile_checkpoint.shell"
 const TAP_SLOP = 18.0
 
 func _ready():
@@ -38,6 +39,7 @@ func _ready():
 	get_viewport().size_changed.connect(_update_safe_area)
 	_update_safe_area()
 	Engine.max_fps = fps_limit
+	_apply_mobile_lighting.call_deferred()
 
 func _input(event):
 	if not enabled or _backgrounded:
@@ -76,7 +78,7 @@ func _send_motion(position: Vector2):
 	motion.device = InputEvent.DEVICE_ID_EMULATION
 	motion.position = position
 	motion.global_position = position
-	get_viewport().push_input(motion, true)
+	get_viewport().push_input(motion)
 
 func _send_button(position: Vector2, pressed: bool, cancelled = false):
 	_mouse_down = pressed
@@ -88,7 +90,7 @@ func _send_button(position: Vector2, pressed: bool, cancelled = false):
 	button.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
 	button.pressed = pressed
 	button.canceled = cancelled
-	get_viewport().push_input(button, true)
+	get_viewport().push_input(button)
 
 func _cancel_touch():
 	_cancelled = true
@@ -104,13 +106,15 @@ func _build_controls():
 	_pause_button = Button.new()
 	_pause_button.text = "II"
 	_pause_button.tooltip_text = tr("PAUSE")
-	_pause_button.size = Vector2(48, 48)
-	_pause_button.add_theme_font_size_override("font_size", 24)
+	_pause_button.custom_minimum_size = Vector2(36, 36)
+	_pause_button.size = Vector2(36, 36)
+	_pause_button.add_theme_font_size_override("font_size", 18)
 	_pause_button.pressed.connect(_toggle_pause)
 	add_child(_pause_button)
 	_pause_root = Control.new()
 	_pause_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_pause_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pause_root.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	_pause_root.hide()
 	add_child(_pause_root)
 	var shade = ColorRect.new()
@@ -194,10 +198,82 @@ func _toggle_pause():
 
 func _return_to_menu():
 	_reset_touches()
+	save_checkpoint_from_scene()
 	get_tree().paused = false
 	_pause_root.hide()
 	_pause_button.show()
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")
+
+func has_checkpoint() -> bool:
+	return FileAccess.file_exists(CHECKPOINT_PATH)
+
+func load_checkpoint() -> Dictionary:
+	if not has_checkpoint(): return {}
+	var file = FileAccess.open(CHECKPOINT_PATH, FileAccess.READ)
+	if file == null: return {}
+	var value = file.get_var()
+	file.close()
+	return value if value is Dictionary else {}
+
+func clear_checkpoint():
+	if has_checkpoint():
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(CHECKPOINT_PATH))
+
+func restore_checkpoint(manager: Node) -> bool:
+	var data = load_checkpoint()
+	if data.is_empty() or not is_instance_valid(manager): return false
+	var player_data = manager.get("playerData")
+	manager.set("endless", bool(data.get("endless", false)))
+	player_data.set("currentBatchIndex", int(data.get("current_batch_index", 0)))
+	player_data.set("playername", str(data.get("player_name", player_data.get("playername"))))
+	player_data.set("hasSignedWaiver", true)
+	manager.set("mobile_resume_pending", true)
+	manager.set("mobile_resume_round", int(data.get("current_round", 0)))
+	manager.set("mobile_resume_health_player", int(data.get("health_player", 0)))
+	manager.set("mobile_resume_health_opponent", int(data.get("health_opponent", 0)))
+	manager.set("mobile_resume_sequence", data.get("sequence", []).duplicate())
+	manager.set("mobile_resume_known_shells", data.get("known_shells", []).duplicate())
+	manager.set("playerCurrentTurnItemArray", data.get("items", []).duplicate())
+	manager.set("barrelSawedOff", bool(data.get("barrel_sawed_off", false)))
+	manager.set("dealerCuffed", bool(data.get("dealer_cuffed", false)))
+	manager.set("playerCuffed", bool(data.get("player_cuffed", false)))
+	manager.set("double_or_nothing_rounds_beat", int(data.get("double_rounds", 0)))
+	manager.set("prevscore", int(data.get("score", 0)))
+	manager.set("dealerAtTable", true)
+	manager.set("dealerHasGreeted", true)
+	return true
+
+func save_checkpoint(manager: Node) -> void:
+	if not enabled or not is_instance_valid(manager): return
+	var rounds = manager.get("roundArray")
+	if not rounds is Array or rounds.is_empty(): return
+	var data = {
+		"version": 1,
+		"endless": bool(manager.get("endless")),
+		"current_batch_index": int(manager.get("playerData").get("currentBatchIndex")),
+		"current_round": int(manager.get("currentRound")),
+		"health_player": int(manager.get("health_player")),
+		"health_opponent": int(manager.get("health_opponent")),
+		"barrel_sawed_off": bool(manager.get("barrelSawedOff")),
+		"dealer_cuffed": bool(manager.get("dealerCuffed")),
+		"player_cuffed": bool(manager.get("playerCuffed")),
+		"player_name": str(manager.get("playerData").get("playername")),
+		"sequence": manager.get("shellSpawner").get("sequenceArray").duplicate(),
+		"known_shells": manager.get("dealerAI").get("sequenceArray_knownShell").duplicate(),
+		"items": manager.get("playerCurrentTurnItemArray").duplicate(),
+		"double_rounds": int(manager.get("double_or_nothing_rounds_beat")),
+		"score": int(manager.get("prevscore"))
+	}
+	var file = FileAccess.open(CHECKPOINT_PATH, FileAccess.WRITE)
+	if file:
+		file.store_var(data)
+		file.close()
+
+func save_checkpoint_from_scene():
+	var scene = get_tree().current_scene
+	if not is_instance_valid(scene): return
+	var manager = scene.get_node_or_null("standalone managers/round manager")
+	if manager: save_checkpoint(manager)
 
 func _notification(what):
 	if not enabled or not is_inside_tree():
@@ -205,11 +281,15 @@ func _notification(what):
 	if what == NOTIFICATION_TRANSLATION_CHANGED:
 		for control in _translation_controls:
 			if is_instance_valid(control): _update_translation(control, _translation_controls[control])
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_checkpoint_from_scene()
+		return
 	if not OS.has_feature("ios"):
 		return
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		if _backgrounded: return
 		_backgrounded = true
+		save_checkpoint_from_scene()
 		_was_paused = get_tree().paused
 		_reset_touches()
 		get_tree().paused = true
@@ -227,7 +307,7 @@ func _update_safe_area():
 		var safe_pixels = Rect2(DisplayServer.get_display_safe_area())
 		var transform = get_viewport().get_screen_transform().affine_inverse()
 		_safe_bounds = _safe_bounds.intersection(transform * safe_pixels)
-	_pause_button.position = Vector2(_safe_bounds.end.x - 60, _safe_bounds.position.y + 12)
+	_pause_button.position = Vector2(_safe_bounds.end.x - 46, _safe_bounds.position.y + 8)
 
 func _set_quality(index: int):
 	quality = clampi(index, 0, 1)
@@ -236,6 +316,22 @@ func _set_quality(index: int):
 
 func _on_node_added(node: Node):
 	if node is Light3D: _apply_quality.call_deferred(node)
+
+func _apply_mobile_lighting():
+	var environment = get_tree().current_scene.find_child("WorldEnvironment", true, false) if is_instance_valid(get_tree().current_scene) else null
+	if environment is WorldEnvironment and environment.environment:
+		environment.environment.adjustment_enabled = true
+		environment.environment.adjustment_brightness = 1.18
+		environment.environment.adjustment_contrast = 1.08
+	var fill = get_tree().root.get_node_or_null("MobileFillLight")
+	if not fill:
+		fill = DirectionalLight3D.new()
+		fill.name = "MobileFillLight"
+		fill.rotation_degrees = Vector3(-48, -28, 0)
+		fill.light_color = Color(1.0, 0.92, 0.82)
+		fill.light_energy = 0.42
+		fill.shadow_enabled = false
+		get_tree().root.add_child(fill)
 
 func _apply_quality(node: Node):
 	if not is_instance_valid(node): return

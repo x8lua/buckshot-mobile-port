@@ -58,10 +58,18 @@ var barrelSawedOff = false
 var defibCutterReady = false
 var trueDeathActive = false
 var playerCurrentTurnItemArray = []
+var mobile_resume_pending := false
+var mobile_resume_round := 0
+var mobile_resume_health_player := 0
+var mobile_resume_health_opponent := 0
+var mobile_resume_sequence: Array = []
+var mobile_resume_known_shells: Array = []
 
 func _ready():
 	Engine.time_scale = 1
 	HideDealer()
+	if MobileRuntime.enabled:
+		MobileRuntime.restore_checkpoint(self)
 	#await get_tree().create_timer(.2, false).timeout
 	pass
 
@@ -85,9 +93,10 @@ func HideDealer():
 var lerping = false
 var enteringFromWaiver = false
 func MainBatchSetup(dealerEnterAtStart : bool):
+	var resuming_mobile = mobile_resume_pending
 	if (!enteringFromWaiver):
 		if (lerping): camera.BeginLerp("enemy")
-		currentRound = 0
+		if (!resuming_mobile): currentRound = 0
 		if (!dealerAtTable && dealerEnterAtStart):
 			await get_tree().create_timer(.5, false).timeout
 			if (!dealerCuffed): animator_dealerHands.play("dealer hands on table")
@@ -124,14 +133,35 @@ func MainBatchSetup(dealerEnterAtStart : bool):
 	mainBatchIndex = playerData.currentBatchIndex
 	healthCounter.DisableCounter()
 	SetupRoundArray()
+	if resuming_mobile:
+		currentRound = clampi(mobile_resume_round, 0, max(0, roundArray.size() - 1))
 	if (playerData.hasReadIntroduction): roundArray[0].hasIntroductoryText = false
 	else: roundArray[0].hasIntroductoryText = true
 	if (roundArray[0].showingIndicator): await(RoundIndicator())
-	healthCounter.SetupHealth()
+	if resuming_mobile:
+		health_player = mobile_resume_health_player
+		health_opponent = mobile_resume_health_opponent
+		healthCounter.UpdateDisplay()
+	else:
+		healthCounter.SetupHealth()
 	lerping = true
 	#await get_tree().create_timer(1.5, false).timeout
 	if (!endless): ParseMainGameAmounts()
-	StartRound(false)
+	if resuming_mobile:
+		mobile_resume_pending = false
+		if mobile_resume_sequence.size() > 0:
+			var live_count = mobile_resume_sequence.count("live")
+			var blank_count = mobile_resume_sequence.count("blank")
+			shellSpawner.SpawnShells(mobile_resume_sequence.size(), live_count, blank_count, false)
+			shellSpawner.sequenceArray = mobile_resume_sequence.duplicate()
+			dealerAI.sequenceArray_knownShell = mobile_resume_known_shells.duplicate()
+			if dealerAI.sequenceArray_knownShell.size() != shellSpawner.sequenceArray.size():
+				dealerAI.sequenceArray_knownShell.resize(shellSpawner.sequenceArray.size())
+			BeginPlayerTurn()
+		else:
+			StartRound(false)
+	else:
+		StartRound(false)
 
 @export var amounts : Amounts
 func ParseMainGameAmounts():
@@ -228,14 +258,17 @@ func StartRound(gettingNext : bool):
 		#await get_tree().create_timer(100, false).timeout
 	#USINGITEMS: SHARE ITEMS TO PLAYERS HERE
 	if (roundArray[currentRound].usingItems):
+		if MobileRuntime.enabled: MobileRuntime.save_checkpoint(self)
 		itemManager.BeginItemGrabbing()
 		return
 	shellSpawner.MainShellRoutine()
+	if MobileRuntime.enabled: MobileRuntime.save_checkpoint(self)
 	pass
 
 #MAIN ROUND SETUP AFTER ITEMS HAVE BEEN DISTRIBUTED. RETURN TO HERE FROM ITEM GRABBING INTERACTION
 func ReturnFromItemGrabbing():
 	shellSpawner.MainShellRoutine()
+	if MobileRuntime.enabled: MobileRuntime.save_checkpoint(self)
 	pass
 
 func LoadShells():
@@ -262,6 +295,7 @@ var wireIsCut_player = false
 
 var ignoring = false
 func EndTurn(playerCanGoAgain : bool):
+	if MobileRuntime.enabled: MobileRuntime.save_checkpoint(self)
 	#USINGITEMS: ASSIGN PLAYER CAN GO AGAIN FROM ITEMS HERE
 	#USINGITEMS: MAKE SHOTGUN GROW NEW BARREL
 	#var isOutOfHealth = CheckIfOutOfHealth()
@@ -332,6 +366,7 @@ func BeginPlayerTurn():
 	perm.SetIndicators(true)
 	perm.SetInteractionPermissions(true)
 	SetupDeskUI()
+	if MobileRuntime.enabled: MobileRuntime.save_checkpoint(self)
 
 @export var deskUI_parent : Control
 @export var deskUI_shotgun : Control
@@ -431,6 +466,7 @@ func RevertDoubleUI():
 @export var ach : Achievement
 func Response(rep : bool):
 	RevertDoubleUI()
+	if MobileRuntime.enabled: MobileRuntime.save_checkpoint(self)
 	intbranch_no.interactionAllowed = false
 	intbranch_yes.interactionAllowed = false
 	cursor.SetCursor(false, false)
@@ -486,6 +522,7 @@ func EndMainBatch():
 	#PLAY WINNING SHIT
 	await get_tree().create_timer(.8, false).timeout
 	if (playerData.currentBatchIndex == 3): 
+		if MobileRuntime.enabled: MobileRuntime.clear_checkpoint()
 		healthCounter.speaker_truedeath.stop()
 		healthCounter.DisableCounter()
 		defibCutter.BlipError_Both()

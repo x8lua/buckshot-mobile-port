@@ -201,6 +201,8 @@ func Start():
 	for w in waterfalls: w.pause()
 	speaker_start.play()
 	cursor.SetCursor(false, false)
+	# Keep the mobile checkpoint so tapping START after relaunch resumes the table.
+	# A completed run clears it from RoundManager.EndMainBatch().
 	savefile.ClearSave()
 	await get_tree().create_timer(4, false).timeout
 	print("changing scene to: main")

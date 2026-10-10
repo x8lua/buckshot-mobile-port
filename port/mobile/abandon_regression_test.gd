@@ -37,7 +37,7 @@ func run():
 	var sequence: Array[String] = ["live", "blank", "live"]
 	var known: Array[bool] = [false, false, false]
 	var file = FileAccess.open(mobile.CHECKPOINT_PATH, FileAccess.WRITE)
-	file.store_var({"version":1,"endless":false,"current_batch_index":1,"current_round":1,"health_player":3,"health_opponent":2,"sequence":sequence,"known_shells":known,"player_name":"tester","items":[]})
+	file.store_var({"version":1,"endless":true,"current_batch_index":1,"current_round":1,"health_player":3,"health_opponent":2,"sequence":sequence,"known_shells":known,"player_name":"tester","items":[]})
 	file.close()
 	change_scene_to_file("res://scenes/main.tscn")
 	await create_timer(12).timeout
@@ -69,7 +69,7 @@ func run():
 		await create_timer(2.0).timeout
 		check(mobile._abandon_stage == "echo" and rm.death.viewblocker.visible, "shot enters black screen with echo")
 		var bus = AudioServer.get_bus_index(mobile.ABANDON_ECHO_BUS)
-		check(bus >= 0 and AudioServer.get_bus_effect_count(bus) == 1 and AudioServer.get_bus_effect(bus, 0) is AudioEffectDelay, "gunshot routed through echo effect")
+		check(bus >= 0 and AudioServer.get_bus_effect_count(bus) == 1 and AudioServer.get_bus_effect(bus, 0) is AudioEffectReverb, "gunshot routed through large-room reverb")
 		await create_timer(1.8).timeout
 		check(current_scene == scene and mobile._abandon_stage == "echo", "bathroom waits for three-second shot tail")
 		await create_timer(4.5).timeout
@@ -77,6 +77,7 @@ func run():
 		var fresh_rm = current_scene.get_node("standalone managers/round manager")
 		var intro = current_scene.get_node("standalone managers/intro manager")
 		check(intro.animator_camera.current_animation == "camera idle bathroom", "camera returned to bathroom")
+		check(fresh_rm.endless and not intro.parent_pills.visible and not intro.allowingPills, "bathroom defaults to pill mode without story selector")
 		check(fresh_rm.playerData.currentBatchIndex == 0 and not fresh_rm.playerData.hasSignedWaiver, "run progression reset")
 		check(not mobile.has_checkpoint() and not FileAccess.file_exists(STORY_SAVE), "both run saves removed")
 		check(AudioServer.get_bus_index(mobile.ABANDON_ECHO_BUS) == -1 and not mobile._abandoning, "echo bus cleaned and interaction unlocked")

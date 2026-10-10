@@ -17,13 +17,17 @@ func run():
  var sequence: Array[String] = ["live", "blank", "live"]
  var known: Array[bool] = [false, false, false]
  var file = FileAccess.open(mobile.CHECKPOINT_PATH,FileAccess.WRITE)
- file.store_var({"version":1,"endless":false,"current_batch_index":1,"current_round":1,"health_player":3,"health_opponent":2,"sequence":sequence,"known_shells":known,"player_name":"tester","items":[]})
+ file.store_var({"version":1,"endless":true,"current_batch_index":1,"current_round":1,"health_player":3,"health_opponent":2,"sequence":sequence,"known_shells":known,"player_name":"tester","items":[]})
  file.close()
  change_scene_to_file("res://scenes/main.tscn")
  await create_timer(12).timeout
  var rm = current_scene.get_node("standalone managers/round manager")
  print("RESUME_STATE round=",rm.currentRound," socket=",rm.camera.activeSocket," cursor=",rm.cursor.cursor_visible," shells=",rm.shellSpawner.sequenceArray," dealer_animation=",rm.animator_dealer.current_animation)
  check(rm.currentRound == 1,"saved round restored")
+ check(rm.endless,"pill mode restored as default")
+ var table = current_scene.get_node("tabletop parent/main tabletop")
+ var table_mat = table.get_active_material(0)
+ check(table_mat.emission_enabled and is_equal_approx(table_mat.emission_energy_multiplier,0.16) and table_mat.emission_operator == BaseMaterial3D.EMISSION_OP_MULTIPLY,"table uses restrained textured readability")
  check(rm.camera.activeSocket == "home","camera returned to table")
  check(rm.deskUI_shotgun.visible and rm.cursor.cursor_visible,"interactive table visible")
  check(is_equal_approx(rm.animator_dealer.get_parent().position.x,20.6857),"dealer actually at table")
@@ -94,6 +98,15 @@ func run():
   check(mobile._can_replay_shells(),"new shell/tool batch rearms once")
  else:
   check(false,"local brightness and once-per-batch replay implemented")
+ file = FileAccess.open(mobile.CHECKPOINT_PATH,FileAccess.WRITE)
+ file.store_var({"version":1,"endless":false,"current_batch_index":1,"current_round":1})
+ file.close()
+ change_scene_to_file("res://scenes/main.tscn")
+ await create_timer(5).timeout
+ rm = current_scene.get_node("standalone managers/round manager")
+ var intro = current_scene.get_node("standalone managers/intro manager")
+ check(not mobile.has_checkpoint() and not rm.mobile_resume_pending,"obsolete story checkpoint cannot resume")
+ check(rm.endless and rm.playerData.currentBatchIndex == 0 and intro.animator_camera.current_animation == "camera idle bathroom","story save migrates to fresh pill-mode bathroom")
  if existed:
   file = FileAccess.open(mobile.CHECKPOINT_PATH,FileAccess.WRITE); file.store_buffer(backup); file.close()
  else: mobile.clear_checkpoint()

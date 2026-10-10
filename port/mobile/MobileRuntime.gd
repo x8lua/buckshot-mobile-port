@@ -240,6 +240,12 @@ func _return_to_menu():
 func has_checkpoint() -> bool:
 	return FileAccess.file_exists(CHECKPOINT_PATH)
 
+func discard_story_checkpoint(manager: Node):
+	var data = load_checkpoint()
+	if not data.is_empty() and not bool(data.get("endless", false)):
+		clear_checkpoint()
+		_reset_run_data(manager)
+
 func load_checkpoint() -> Dictionary:
 	if not has_checkpoint(): return {}
 	var file = FileAccess.open(CHECKPOINT_PATH, FileAccess.READ)
@@ -255,6 +261,10 @@ func clear_checkpoint():
 func restore_checkpoint(manager: Node) -> bool:
 	var data = load_checkpoint()
 	if data.is_empty() or not is_instance_valid(manager): return false
+	if not bool(data.get("endless", false)):
+		clear_checkpoint()
+		_reset_run_data(manager)
+		return false
 	var player_data = manager.get("playerData")
 	manager.set("endless", bool(data.get("endless", false)))
 	player_data.set("currentBatchIndex", int(data.get("current_batch_index", 0)))
@@ -348,6 +358,7 @@ func _set_quality(index: int):
 	_save_settings()
 
 func _on_node_added(node: Node):
+	if node is MeshInstance3D: _readable_table.call_deferred(node)
 	if node is PipelineManager: _preserve_shell_colors.call_deferred(node)
 	if node is ShellSpawner: _attach_shell_replay.call_deferred(node)
 	if node is ShellClass: _brighten_shell.call_deferred(node)
@@ -452,6 +463,22 @@ var _abandoning := false
 var _abandon_stage := ""
 var _abandon_echo: AudioStreamPlayer
 const ABANDON_ECHO_BUS = "MobileAbandonEcho"
+
+func _readable_table(mesh: MeshInstance3D):
+	if not is_instance_valid(mesh) or mesh.mesh == null: return
+	for surface in mesh.mesh.get_surface_count():
+		var original = mesh.get_active_material(surface)
+		if not original is StandardMaterial3D or original.albedo_texture == null: continue
+		var texture_path = original.albedo_texture.resource_path.to_lower()
+		if not texture_path.contains("tabletop felt") or original.has_meta("mobile_table_readability"): continue
+		var material = original.duplicate() as StandardMaterial3D
+		material.emission_enabled = true
+		material.emission = material.albedo_color
+		material.emission_texture = material.albedo_texture
+		material.emission_energy_multiplier = 0.16
+		material.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+		material.set_meta("mobile_table_readability", true)
+		mesh.set_surface_override_material(surface, material)
 
 func _brighten_mesh(mesh: MeshInstance3D, energy: float):
 	if not is_instance_valid(mesh) or mesh.mesh == null: return
@@ -713,15 +740,15 @@ func _start_abandon_echo(source: AudioStreamPlayer2D):
 	var bus = AudioServer.bus_count - 1
 	AudioServer.set_bus_name(bus, ABANDON_ECHO_BUS)
 	AudioServer.set_bus_send(bus, source.bus)
-	var delay = AudioEffectDelay.new()
-	delay.tap1_delay_ms = 175
-	delay.tap1_level_db = -6
-	delay.tap2_delay_ms = 350
-	delay.tap2_level_db = -12
-	delay.feedback_active = true
-	delay.feedback_delay_ms = 350
-	delay.feedback_level_db = -3
-	AudioServer.add_bus_effect(bus, delay)
+	var reverb = AudioEffectReverb.new()
+	reverb.room_size = 0.95
+	reverb.damping = 0.20
+	reverb.spread = 1.0
+	reverb.predelay_msec = 65.0
+	reverb.predelay_feedback = 0.25
+	reverb.dry = 0.80
+	reverb.wet = 0.65
+	AudioServer.add_bus_effect(bus, reverb)
 	_abandon_echo = AudioStreamPlayer.new()
 	_abandon_echo.stream = source.stream
 	_abandon_echo.volume_db = source.volume_db
@@ -735,6 +762,12 @@ func _stop_abandon_echo():
 		_abandon_echo.queue_free()
 	var bus = AudioServer.get_bus_index(ABANDON_ECHO_BUS)
 	if bus >= 0: AudioServer.remove_bus(bus)
+
+func _reset_run_data(manager: Node):
+	var fresh = PlayerData.new()
+	for property in fresh.get_property_list():
+		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			manager.playerData.set(property.name, fresh.get(property.name))
 
 func _abandon_run():
 	if not _table_idle(): return
@@ -775,9 +808,6 @@ func _abandon_run():
 	# No normal damage/death routine: it would continue the run or enter heaven.
 	clear_checkpoint()
 	rm.death.savefile.ClearSave()
-	var fresh = PlayerData.new()
-	for property in fresh.get_property_list():
-		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-			rm.playerData.set(property.name, fresh.get(property.name))
+	_reset_run_data(rm)
 	_abandon_stage = "bathroom"
 	get_tree().change_scene_to_file("res://scenes/main.tscn")

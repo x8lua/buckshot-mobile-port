@@ -48,6 +48,9 @@ func _ready():
 	parent_pills.visible = false
 	allowingPills = false
 	SetControllerState()
+	if MobileRuntime.enabled:
+		MobileRuntime.discard_story_checkpoint(roundManager)
+		endlessmode.SetupEndless()
 	if MobileRuntime.enabled and MobileRuntime.has_checkpoint():
 		# A mobile checkpoint is already at the table; skip the bathroom intro.
 		viewblocker.visible = false
@@ -61,8 +64,8 @@ func _ready():
 	if (roundManager.playerData.playerEnteringFromDeath or roundManager.playerData.enteringFromTrueDeath): 
 		parent_pills.visible = false
 		allowingPills = false
-	if MobileRuntime.enabled or (!roundManager.playerData.playerEnteringFromDeath && !roundManager.playerData.enteringFromTrueDeath):
-		if MobileRuntime.enabled or FileAccess.file_exists(unlocker.savepath):
+	if not MobileRuntime.enabled and (!roundManager.playerData.playerEnteringFromDeath && !roundManager.playerData.enteringFromTrueDeath):
+		if FileAccess.file_exists(unlocker.savepath):
 			parent_pills.visible = true
 			crtManager.SetCRT(true)
 			allowingPills = true
@@ -173,6 +176,7 @@ func MainTrackLoad():
 	speaker_amb_restroom.play()
 
 func Interaction_PillBottle():
+	if MobileRuntime.enabled: return
 	anim_pillflicker.play("RESET")
 	cursor.SetCursor(false, false)
 	intbranch_bathroomdoor.interactionAllowed = false

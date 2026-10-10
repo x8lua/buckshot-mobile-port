@@ -78,7 +78,7 @@ func _send_motion(position: Vector2):
 	motion.device = InputEvent.DEVICE_ID_EMULATION
 	motion.position = position
 	motion.global_position = position
-	get_viewport().push_input(motion)
+	get_viewport().push_input(motion, true)
 
 func _send_button(position: Vector2, pressed: bool, cancelled = false):
 	_mouse_down = pressed
@@ -90,7 +90,7 @@ func _send_button(position: Vector2, pressed: bool, cancelled = false):
 	button.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
 	button.pressed = pressed
 	button.canceled = cancelled
-	get_viewport().push_input(button)
+	get_viewport().push_input(button, true)
 
 func _cancel_touch():
 	_cancelled = true

@@ -10,6 +10,8 @@ if grep -Eq 'SCRIPT ERROR:|ERROR: Failed to load' build/evidence/import.log; the
     echo 'Import contains blocking script/resource errors' >&2
     exit 1
 fi
+"$GODOT" --headless --path game --script res://mobile/touch_regression_test.gd -- --mobile-preview 2>&1 | tee build/evidence/touch-regression.log
+grep -q 'TOUCH_RESULT PASS' build/evidence/touch-regression.log
 "$GODOT" --headless --path game --export-release iOS "$PWD/build/export/BuckshotMobile.zip" \
     2>&1 | tee build/evidence/export.log
 test -d build/export/BuckshotMobile.xcodeproj

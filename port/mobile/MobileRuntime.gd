@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const CJK_FONT = preload("res://fonts/fonts language/NotoSansTC-Regular_traditional chinese_new.ttf")
+
 var enabled = OS.has_feature("ios") or OS.has_feature("mobile_demo") or OS.get_cmdline_user_args().has("--mobile-preview")
 var valid_tap = false
 var quality = 1
@@ -17,6 +19,7 @@ var _safe_bounds = Rect2(Vector2.ZERO, Vector2(960, 540))
 var _backgrounded = false
 var _was_paused = false
 var _translation_controls = {}
+var music_ota: Node
 const SETTINGS_PATH = "user://buckshot_mobile.cfg"
 const CHECKPOINT_PATH = "user://buckshot_mobile_checkpoint.shell"
 const TAP_SLOP = 18.0
@@ -35,6 +38,9 @@ func _ready():
 	get_viewport().size_changed.connect(_update_safe_area)
 	_update_safe_area()
 	Engine.max_fps = fps_limit
+	music_ota = preload("res://mobile/MusicOTA.gd").new()
+	music_ota.name = "MusicOTA"
+	add_child(music_ota)
 
 func _input(event):
 	if OS.has_feature("mobile_demo") and event is InputEventMouse and event.device != InputEvent.DEVICE_ID_EMULATION:
@@ -374,6 +380,8 @@ func configure_menu(menu: Node):
 	menu.optionmanager.ui_fullscreen.hide()
 
 func _localize(control: Node, key: String):
+	if control is Control:
+		control.add_theme_font_override("font", CJK_FONT)
 	_translation_controls[control] = key
 	_update_translation(control, key)
 

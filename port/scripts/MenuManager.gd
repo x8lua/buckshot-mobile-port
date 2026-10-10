@@ -91,6 +91,8 @@ func Intro():
 		print("lobby id found in command line. dont run the menu intro")
 		return
 	viewing_intro = true
+	if MobileRuntime.enabled and is_instance_valid(MobileRuntime.music_ota):
+		speaker_music.stream = MobileRuntime.music_ota.get_override("menu", speaker_music.stream)
 	speaker_music.play()
 	animator_intro.play("splash screen")
 	c = true

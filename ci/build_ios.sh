@@ -20,6 +20,10 @@ grep -q 'ORIGINAL_LIGHTING_RESULT PASS' build/evidence/original-lighting.log
 grep -q 'RESUME_RESULT PASS' build/evidence/resume-replay.log
 "$GODOT" --headless --path game --script res://mobile/abandon_regression_test.gd -- --mobile-preview 2>&1 | tee build/evidence/abandon-regression.log
 grep -q 'ABANDON_RESULT PASS' build/evidence/abandon-regression.log
+python3 ci/test_music_ota.py --godot "$GODOT" --project game 2>&1 | tee build/evidence/music-ota.log
+grep -q 'MUSIC_OTA_HTTP_CACHE_RESULT PASS' build/evidence/music-ota.log
+"$GODOT" --headless --path game --script res://mobile/cjk_font_test.gd -- --mobile-preview 2>&1 | tee build/evidence/cjk-font.log
+grep -q 'CJK_FONT_RESULT PASS' build/evidence/cjk-font.log
 "$GODOT" --headless --path game --export-release iOS "$PWD/build/export/BuckshotMobile.zip" \
     2>&1 | tee build/evidence/export.log
 test -d build/export/BuckshotMobile.xcodeproj

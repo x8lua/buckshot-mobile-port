@@ -22,13 +22,17 @@ var trackset = false
 func LoadTrack():
 	var currentBatch = roundManager.playerData.currentBatchIndex
 	var currentTrack
+	var ota_track_id = "batch_%d" % currentBatch
 	if (roundManager.playerData.playerEnteringFromDeath && !trackset):
 		currentTrack = trackArray[currentBatch].audiofile_secondloop
+		ota_track_id += "_secondloop"
 		trackset = true
 	else:
 		currentTrack = trackArray[currentBatch].audiofile
 	filter.lowPassDefaultValue = trackArray[currentBatch].defaultLowPassHz
 	filter.effect_lowPass.cutoff_hz = filter.lowPassDefaultValue
 	filter.moving = false
+	if MobileRuntime.enabled and is_instance_valid(MobileRuntime.music_ota):
+		currentTrack = MobileRuntime.music_ota.get_override(ota_track_id, currentTrack)
 	speaker_music.stream = currentTrack
 	speaker_music.play()

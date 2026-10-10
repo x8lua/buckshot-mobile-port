@@ -13,6 +13,8 @@ Original game and assets are by Mike Klubnika. This repository is not an officia
   run using the original shooting animation, a large-room reverb, and a
   three-second blackout before returning to a fresh bathroom.
 - IPA is unsigned and must be signed by a sideloading tool before installation.
+- Music can update over HTTPS without replacing the installed app. See
+  [音樂 OTA 更新指南](music/README.zh-TW.md). Empty manifests use built-in music.
 
 `port/` contains the source overlay. The private `recovered-assets` release stores
 `game-assets.zip` and its SHA256. CI extracts the archive and applies the source

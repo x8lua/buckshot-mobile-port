@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-var enabled = OS.has_feature("ios") or OS.get_cmdline_user_args().has("--mobile-preview")
+var enabled = OS.has_feature("ios") or OS.has_feature("mobile_demo") or OS.get_cmdline_user_args().has("--mobile-preview")
 var valid_tap = false
 var quality = 1
 var fps_limit = 30
@@ -41,7 +41,27 @@ func _ready():
 	Engine.max_fps = fps_limit
 
 func _input(event):
+	if OS.has_feature("mobile_demo") and event is InputEventMouse and event.device != InputEvent.DEVICE_ID_EMULATION:
+		var touch: InputEvent
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			touch = InputEventScreenTouch.new()
+			touch.index = 0
+			touch.position = event.position
+			touch.pressed = event.pressed
+		elif event is InputEventMouseMotion and _mouse_down:
+			touch = InputEventScreenDrag.new()
+			touch.index = 0
+			touch.position = event.position
+			touch.relative = event.relative
+		if touch:
+			get_viewport().push_input(touch, true)
+			get_viewport().set_input_as_handled()
+			return
 	if enabled and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and valid_tap and not get_tree().paused:
+		if _click_dealer_abandon(event.position):
+			get_viewport().set_input_as_handled()
+			return
+		_dealer_taps = 0
 		if _click_shell_panel(event.position):
 			get_viewport().set_input_as_handled()
 			return
@@ -200,6 +220,8 @@ func _set_fps(index: int):
 	_save_settings()
 
 func _toggle_pause():
+	if _abandoning: return
+	_dealer_taps = 0
 	_reset_touches()
 	var paused = not get_tree().paused
 	get_tree().paused = paused
@@ -255,7 +277,7 @@ func restore_checkpoint(manager: Node) -> bool:
 	return true
 
 func save_checkpoint(manager: Node) -> void:
-	if not enabled or not is_instance_valid(manager): return
+	if not enabled or _abandoning or not is_instance_valid(manager): return
 	var rounds = manager.get("roundArray")
 	if not rounds is Array or rounds.is_empty(): return
 	var data = {
@@ -424,6 +446,12 @@ var _shell_display_sequence: Array = []
 var _dealer_animator: AnimationPlayer
 var _dealer_visual: Node3D
 var _dealer_readable_materials: Array = []
+var _dealer_hitbox: StaticBody3D
+var _dealer_taps := 0
+var _abandoning := false
+var _abandon_stage := ""
+var _abandon_echo: AudioStreamPlayer
+const ABANDON_ECHO_BUS = "MobileAbandonEcho"
 
 func _brighten_mesh(mesh: MeshInstance3D, energy: float):
 	if not is_instance_valid(mesh) or mesh.mesh == null: return
@@ -471,6 +499,17 @@ func _brighten_dealer(dealer: DealerIntelligence):
 	var visual = animator.get_parent() as Node3D
 	_dealer_animator = animator
 	_dealer_visual = visual
+	_dealer_hitbox = StaticBody3D.new()
+	_dealer_hitbox.name = "MobileDealerAbandonHitbox"
+	var head = dealer.dealermesh_normal as MeshInstance3D
+	var bounds = _posed_head_bounds(head)
+	var collision = CollisionShape3D.new()
+	var shape = BoxShape3D.new()
+	shape.size = bounds.size
+	collision.shape = shape
+	collision.position = bounds.get_center()
+	_dealer_hitbox.add_child(collision)
+	head.add_child(_dealer_hitbox)
 	if not animator.has_meta("mobile_dealer_visibility"):
 		animator.set_meta("mobile_dealer_visibility", true)
 		animator.animation_started.connect(_dealer_animation_started.bind(visual))
@@ -479,6 +518,35 @@ func _brighten_dealer(dealer: DealerIntelligence):
 		var returning = animator.get_animation("dealer return to table")
 		var table_position = returning.track_get_key_value(0, returning.track_get_key_count(0) - 1)
 		visual.visible = visual.position.distance_to(table_position) < 0.05
+
+func _posed_head_bounds(head: MeshInstance3D) -> AABB:
+	# Imported vertices live in bind space. Apply the skin exactly as rendering
+	# does so the collision covers the visible face rather than the unposed mesh.
+	var skeleton = head.get_parent() as Skeleton3D
+	var transforms: Array[Transform3D] = []
+	for bind in head.skin.get_bind_count():
+		var bone = head.skin.get_bind_bone(bind)
+		if bone < 0: bone = skeleton.find_bone(head.skin.get_bind_name(bind))
+		transforms.append(skeleton.get_bone_global_pose(bone) * head.skin.get_bind_pose(bind))
+	var bounds = AABB()
+	var initialized = false
+	for surface in head.mesh.get_surface_count():
+		var arrays = head.mesh.surface_get_arrays(surface)
+		var vertices = arrays[Mesh.ARRAY_VERTEX]
+		var bones = arrays[Mesh.ARRAY_BONES]
+		var weights = arrays[Mesh.ARRAY_WEIGHTS]
+		var influences = weights.size() / vertices.size()
+		for vertex in vertices.size():
+			var point = Vector3.ZERO
+			for influence in int(influences):
+				var index = vertex * int(influences) + influence
+				point += (transforms[bones[index]] * vertices[vertex]) * weights[index]
+			point = head.transform.affine_inverse() * point
+			if not initialized:
+				bounds = AABB(point, Vector3.ZERO)
+				initialized = true
+			else: bounds = bounds.expand(point)
+	return bounds
 
 func _preserve_shell_colors(pipeline: PipelineManager):
 	if not is_instance_valid(pipeline) or pipeline.scene != "main": return
@@ -509,6 +577,18 @@ func _set_dealer_readability(amount: float):
 func _attach_shell_replay(spawner: ShellSpawner):
 	if not is_instance_valid(spawner) or not spawner.spawnParent is MeshInstance3D: return
 	_shell_spawner = spawner
+	# Keep the original lower table edge while including the dealer for direct taps.
+	var camera = spawner.roundManager.camera
+	for index in camera.socketArray.size():
+		if camera.socketArray[index].socketName == "home":
+			var socket = camera.socketArray[index].duplicate()
+			socket.rot.x = -39.0
+			socket.fov = 86.0
+			camera.socketArray[index] = socket
+	_abandoning = false
+	_abandon_stage = ""
+	_dealer_taps = 0
+	_pause_button.show()
 	_shell_batch_id = 0
 	_shell_replay_available = false
 	_shell_replay_busy = false
@@ -526,6 +606,8 @@ func _attach_shell_replay(spawner: ShellSpawner):
 
 func _process(_delta):
 	if not enabled: return
+	if is_instance_valid(_dealer_hitbox):
+		_dealer_hitbox.collision_layer = 1 if _table_idle() else 0
 	if is_instance_valid(_dealer_animator) and _dealer_animator.is_playing():
 		var animation = _dealer_animator.current_animation
 		if animation in ["dealer return to table", "dealer fly away"]:
@@ -549,6 +631,10 @@ func _update_shell_batch():
 
 func _can_replay_shells() -> bool:
 	if not _shell_replay_available or _shell_replay_busy or get_tree().paused: return false
+	return _table_idle()
+
+func _table_idle() -> bool:
+	if _abandoning or _shell_replay_busy or get_tree().paused: return false
 	if not is_instance_valid(_shell_spawner): return false
 	var rm = _shell_spawner.roundManager
 	if not is_instance_valid(rm) or not is_instance_valid(rm.deskUI_shotgun) or not rm.deskUI_shotgun.visible: return false
@@ -609,3 +695,89 @@ func _replay_shells():
 	rm.perm.SetInteractionPermissions(true)
 	rm.SetupDeskUI()
 	_shell_replay_busy = false
+
+func _click_dealer_abandon(position: Vector2) -> bool:
+	if not is_instance_valid(_dealer_hitbox) or not is_instance_valid(_dealer_visual) or not _dealer_visual.visible: return false
+	if not _table_idle(): return false
+	var cam = get_viewport().get_camera_3d()
+	if not is_instance_valid(cam): return false
+	var start = cam.project_ray_origin(position)
+	var hit = cam.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(start, start + cam.project_ray_normal(position) * 200.0))
+	if hit.get("collider") != _dealer_hitbox: return false
+	_dealer_taps += 1
+	if _dealer_taps == 5: _abandon_run()
+	return true
+
+func _start_abandon_echo(source: AudioStreamPlayer2D):
+	AudioServer.add_bus()
+	var bus = AudioServer.bus_count - 1
+	AudioServer.set_bus_name(bus, ABANDON_ECHO_BUS)
+	AudioServer.set_bus_send(bus, source.bus)
+	var delay = AudioEffectDelay.new()
+	delay.tap1_delay_ms = 175
+	delay.tap1_level_db = -6
+	delay.tap2_delay_ms = 350
+	delay.tap2_level_db = -12
+	delay.feedback_active = true
+	delay.feedback_delay_ms = 350
+	delay.feedback_level_db = -3
+	AudioServer.add_bus_effect(bus, delay)
+	_abandon_echo = AudioStreamPlayer.new()
+	_abandon_echo.stream = source.stream
+	_abandon_echo.volume_db = source.volume_db
+	_abandon_echo.bus = ABANDON_ECHO_BUS
+	add_child(_abandon_echo)
+	_abandon_echo.play()
+
+func _stop_abandon_echo():
+	if is_instance_valid(_abandon_echo):
+		_abandon_echo.stop()
+		_abandon_echo.queue_free()
+	var bus = AudioServer.get_bus_index(ABANDON_ECHO_BUS)
+	if bus >= 0: AudioServer.remove_bus(bus)
+
+func _abandon_run():
+	if not _table_idle(): return
+	_abandoning = true
+	_abandon_stage = "grabbing"
+	clear_checkpoint()
+	_reset_touches()
+	_pause_button.hide()
+	var rm = _shell_spawner.roundManager
+	var dealer = rm.dealerAI
+	rm.death.savefile.ClearSave()
+	rm.perm.SetIndicators(false)
+	rm.perm.SetInteractionPermissions(false)
+	rm.cursor.SetCursor(false, false)
+	rm.ClearDeskUI(true)
+	rm.musicManager.EndTrack()
+	rm.camera.BeginLerp("enemy")
+	await get_tree().create_timer(0.8, false).timeout
+	if not is_instance_valid(rm): return
+	await dealer.GrabShotgun()
+	if not is_instance_valid(rm): return
+	_abandon_stage = "aiming"
+	dealer.animator_shotgun.play("enemy shoot player")
+	await get_tree().create_timer(2.0, false).timeout
+	if not is_instance_valid(rm): return
+	_abandon_stage = "echo"
+	var gun = dealer.shotgunShooting
+	gun.animator_muzzleFlash.play("muzzle flash fire")
+	gun.animator_muzzleFlash_model.play("fire")
+	dealer.smoke.SpawnSmoke("barrel")
+	dealer.cameraShaker.Shake()
+	_start_abandon_echo(gun.speaker_live)
+	rm.death.viewblocker.visible = true
+	await get_tree().create_timer(3.0, false).timeout
+	_stop_abandon_echo()
+	if not is_instance_valid(rm): return
+	# Clear both save routes and the shared resource before returning to the bathroom.
+	# No normal damage/death routine: it would continue the run or enter heaven.
+	clear_checkpoint()
+	rm.death.savefile.ClearSave()
+	var fresh = PlayerData.new()
+	for property in fresh.get_property_list():
+		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			rm.playerData.set(property.name, fresh.get(property.name))
+	_abandon_stage = "bathroom"
+	get_tree().change_scene_to_file("res://scenes/main.tscn")

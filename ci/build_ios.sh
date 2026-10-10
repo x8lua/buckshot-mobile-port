@@ -18,6 +18,8 @@ grep -q 'PAUSE_SETTINGS_RESULT PASS' build/evidence/pause-settings.log
 grep -q 'ORIGINAL_LIGHTING_RESULT PASS' build/evidence/original-lighting.log
 "$GODOT" --headless --path game --script res://mobile/resume_regression_test.gd -- --mobile-preview 2>&1 | tee build/evidence/resume-replay.log
 grep -q 'RESUME_RESULT PASS' build/evidence/resume-replay.log
+"$GODOT" --headless --path game --script res://mobile/abandon_regression_test.gd -- --mobile-preview 2>&1 | tee build/evidence/abandon-regression.log
+grep -q 'ABANDON_RESULT PASS' build/evidence/abandon-regression.log
 "$GODOT" --headless --path game --export-release iOS "$PWD/build/export/BuckshotMobile.zip" \
     2>&1 | tee build/evidence/export.log
 test -d build/export/BuckshotMobile.xcodeproj

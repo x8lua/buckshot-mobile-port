@@ -326,6 +326,7 @@ func _set_quality(index: int):
 	_save_settings()
 
 func _on_node_added(node: Node):
+	if node is PipelineManager: _preserve_shell_colors.call_deferred(node)
 	if node is ShellSpawner: _attach_shell_replay.call_deferred(node)
 	if node is ShellClass: _brighten_shell.call_deferred(node)
 	if node is DealerIntelligence: _brighten_dealer.call_deferred(node)
@@ -448,16 +449,17 @@ func _readable_shell_mesh(mesh: MeshInstance3D):
 	# Keep original red/blue albedo; no global exposure or illumination changes.
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.emission_enabled = false
+	material.albedo_color = Color(original.albedo_color.r * 0.55, original.albedo_color.g * 0.55, original.albedo_color.b * 0.55, original.albedo_color.a)
 	material.set_meta("mobile_shell_color", true)
 	mesh.set_surface_override_material(1, material)
 
 func _brighten_dealer(dealer: DealerIntelligence):
 	if not is_instance_valid(dealer): return
 	for mesh in [dealer.dealermesh_normal, dealer.dealermesh_crushed]:
-		_brighten_mesh(mesh, 0.025)
+		_brighten_mesh(mesh, 0.065)
 		# Both original head meshes use surface 1 for grey teeth (Material.001).
 		var teeth = mesh.get_active_material(1).duplicate() as StandardMaterial3D
-		teeth.emission_energy_multiplier = 0.65
+		teeth.emission_energy_multiplier = 0.35
 		mesh.set_surface_override_material(1, teeth)
 	var animator = dealer.roundManager.animator_dealer
 	var visual = animator.get_parent() as Node3D
@@ -469,6 +471,13 @@ func _brighten_dealer(dealer: DealerIntelligence):
 		var returning = animator.get_animation("dealer return to table")
 		var table_position = returning.track_get_key_value(0, returning.track_get_key_count(0) - 1)
 		visual.visible = visual.position.distance_to(table_position) < 0.05
+
+func _preserve_shell_colors(pipeline: PipelineManager):
+	if not is_instance_valid(pipeline) or pipeline.scene != "main": return
+	var rect = pipeline.overlay.get_node_or_null("BackBufferCopy/ColorRect")
+	if rect and rect.material is ShaderMaterial:
+		rect.material = rect.material.duplicate()
+		rect.material.set_shader_parameter("preserve_shell_colors", true)
 
 func _dealer_animation_started(animation: StringName, visual: Node3D):
 	if not is_instance_valid(visual): return

@@ -31,11 +31,11 @@ func run():
  check(rm.shellSpawner.sequenceArray == sequence,"remaining chamber preserved")
  if mobile.has_method("_can_replay_shells"):
   var dealer = rm.dealerAI.dealermesh_normal
-  check(dealer.get_active_material(0).emission_enabled and is_equal_approx(dealer.get_active_material(0).emission_energy_multiplier,0.025),"dealer skin dimmed locally")
+  check(dealer.get_active_material(0).emission_enabled and is_equal_approx(dealer.get_active_material(0).emission_energy_multiplier,0.065),"dealer face readable locally")
   var shell = rm.shellSpawner.spawnedShellObjectArray[0].get_child(0)
   check(shell.mesh.get_active_material(1).shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED,"display shell color independent of environment")
   check(shell.mesh.get_active_material(1) != shell.mat_live,"shared original shell material untouched")
-  check(dealer.get_active_material(1).emission_enabled and is_equal_approx(dealer.get_active_material(1).emission_energy_multiplier,0.65),"teeth brighter than skin")
+  check(dealer.get_active_material(1).emission_enabled and is_equal_approx(dealer.get_active_material(1).emission_energy_multiplier,0.35),"teeth balanced against face")
   var examine = current_scene.get_node("standalone managers/shell examine")
   for kind in ["live","blank"]:
    rm.shellSpawner.sequenceArray[0] = kind
@@ -44,7 +44,8 @@ func run():
    await process_frame
    var color_mat = examine.mesh.get_active_material(1)
    check(color_mat.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED,"magnifier "+kind+" color independent of environment")
-   check(color_mat.albedo_color == (examine.mat_live.albedo_color if kind == "live" else examine.mat_blank.albedo_color),"magnifier "+kind+" preserves distinct original color")
+   var base_color = examine.mat_live.albedo_color if kind == "live" else examine.mat_blank.albedo_color
+   check(color_mat.albedo_color.is_equal_approx(Color(base_color.r*0.55,base_color.g*0.55,base_color.b*0.55,base_color.a)),"magnifier "+kind+" preserves hue without white clipping")
    examine.RevertShell()
   rm.shellSpawner.sequenceArray[0] = "live"
   var visual = rm.animator_dealer.get_parent()

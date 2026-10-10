@@ -41,6 +41,10 @@ func _ready():
 	Engine.max_fps = fps_limit
 
 func _input(event):
+	if enabled and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and valid_tap and not get_tree().paused:
+		if _click_shell_panel(event.position):
+			get_viewport().set_input_as_handled()
+			return
 	if not enabled or _backgrounded:
 		return
 	if event is InputEventScreenTouch:
@@ -322,6 +326,10 @@ func _set_quality(index: int):
 	_save_settings()
 
 func _on_node_added(node: Node):
+	if node is ShellSpawner: _attach_shell_replay.call_deferred(node)
+	if node is ShellClass: _brighten_shell.call_deferred(node)
+	if node is DealerIntelligence: _brighten_dealer.call_deferred(node)
+	if node is ShellExamine: _shell_examine = node
 	if node is Light3D: _apply_quality.call_deferred(node)
 
 func _apply_quality(node: Node):
@@ -404,3 +412,129 @@ func _register_translations():
 		table.set_locale(locale)
 		for key in words[locale]: table.add_message(key, words[locale][key])
 		TranslationServer.add_translation(table)
+# Object-local emission preserves the room darkness. No added light or exposure.
+var _shell_spawner: ShellSpawner
+var _shell_examine: ShellExamine
+var _shell_panel: StaticBody3D
+var _shell_batch_id := 0
+var _shell_replay_available := false
+var _shell_replay_busy := false
+var _shell_display_sequence: Array = []
+
+func _brighten_mesh(mesh: MeshInstance3D, energy: float):
+	if not is_instance_valid(mesh) or mesh.mesh == null: return
+	for surface in mesh.mesh.get_surface_count():
+		var original = mesh.get_active_material(surface)
+		if not original is StandardMaterial3D or original.has_meta("mobile_local_readability"): continue
+		var material = original.duplicate() as StandardMaterial3D
+		material.emission_enabled = true
+		material.emission = material.albedo_color
+		material.emission_texture = material.albedo_texture
+		material.emission_energy_multiplier = energy
+		material.set_meta("mobile_local_readability", true)
+		mesh.set_surface_override_material(surface, material)
+
+func _brighten_shell(shell: ShellClass):
+	if is_instance_valid(shell): _brighten_mesh(shell.mesh, 0.32)
+
+func _brighten_dealer(dealer: DealerIntelligence):
+	if not is_instance_valid(dealer): return
+	_brighten_mesh(dealer.dealermesh_normal, 0.08)
+	_brighten_mesh(dealer.dealermesh_crushed, 0.08)
+
+func _attach_shell_replay(spawner: ShellSpawner):
+	if not is_instance_valid(spawner) or not spawner.spawnParent is MeshInstance3D: return
+	_shell_spawner = spawner
+	_shell_batch_id = 0
+	_shell_replay_available = false
+	_shell_replay_busy = false
+	_shell_display_sequence = []
+	_shell_panel = StaticBody3D.new()
+	_shell_panel.name = "MobileShellReplayPanel"
+	var bounds = (spawner.spawnParent as MeshInstance3D).get_aabb()
+	var shape = BoxShape3D.new()
+	shape.size = bounds.size.max(Vector3(0.15, 0.08, 0.15))
+	var collision = CollisionShape3D.new()
+	collision.shape = shape
+	collision.position = bounds.get_center()
+	_shell_panel.add_child(collision)
+	spawner.spawnParent.add_child(_shell_panel)
+
+func _process(_delta):
+	if not enabled: return
+	_update_shell_batch()
+	if is_instance_valid(_shell_examine) and _shell_examine.shellParent.visible:
+		_brighten_mesh(_shell_examine.mesh, 0.32)
+
+func _update_shell_batch():
+	if not is_instance_valid(_shell_spawner) or _shell_spawner.spawnedShellObjectArray.is_empty(): return
+	var first = _shell_spawner.spawnedShellObjectArray[0]
+	if not is_instance_valid(first): return
+	var identity = first.get_instance_id()
+	if identity == _shell_batch_id: return
+	_shell_batch_id = identity
+	_shell_display_sequence = _shell_spawner.sequenceArray.duplicate()
+	_shell_replay_available = true
+
+func _can_replay_shells() -> bool:
+	if not _shell_replay_available or _shell_replay_busy or get_tree().paused: return false
+	if not is_instance_valid(_shell_spawner): return false
+	var rm = _shell_spawner.roundManager
+	if not is_instance_valid(rm) or not is_instance_valid(rm.deskUI_shotgun) or not rm.deskUI_shotgun.visible: return false
+	if not rm.cursor.cursor_visible or (rm.camera.moving and rm.camera.elapsed < rm.camera.dur) or rm.camera.activeSocket != "home": return false
+	for branch in rm.perm.interactionBranchArray:
+		if branch.interactionAlias == "shotgun": return branch.interactionAllowed and not branch.interactionInvalid
+	return false
+
+func _click_shell_panel(position: Vector2) -> bool:
+	if not is_instance_valid(_shell_panel): return false
+	var cam = get_viewport().get_camera_3d()
+	if not is_instance_valid(cam): return false
+	var start = cam.project_ray_origin(position)
+	var end = start + cam.project_ray_normal(position) * 200.0
+	var hit = cam.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(start, end))
+	if hit.get("collider") != _shell_panel: return false
+	_update_shell_batch()
+	if _can_replay_shells(): _replay_shells()
+	return true
+
+func _replay_shells():
+	if not _can_replay_shells(): return
+	_shell_replay_available = false
+	_shell_replay_busy = true
+	var spawner = _shell_spawner
+	var rm = spawner.roundManager
+	var batch = _shell_batch_id
+	rm.perm.SetIndicators(false)
+	rm.perm.SetInteractionPermissions(false)
+	rm.cursor.SetCursor(false, false)
+	rm.ClearDeskUI(true)
+	rm.camera.BeginLerp("shell compartment")
+	await get_tree().create_timer(0.5, false).timeout
+	if not is_instance_valid(spawner): return
+	spawner.anim_compartment.play("show shells")
+	spawner.PlayLatchSound()
+	# Only redisplay the original batch: do not spawn, load, shuffle or reveal the chamber.
+	spawner.seq = _shell_display_sequence.duplicate()
+	spawner.PlayAudioIndicators()
+	var lives = _shell_display_sequence.count("live")
+	var blanks = _shell_display_sequence.count("blank")
+	var live_text = tr("LIVEROUND") if lives == 1 else tr("LIVEROUNDS")
+	var blank_text = tr("BLANKROUND") if blanks == 1 else tr("BLANKROUNDS")
+	spawner.dialogue.ShowText_Forever((live_text % str(lives)) + " " + (blank_text % str(blanks)))
+	await get_tree().create_timer(2.5, false).timeout
+	if not is_instance_valid(spawner): return
+	spawner.dialogue.HideText()
+	spawner.anim_compartment.play("hide shells")
+	spawner.PlayLatchSound()
+	await get_tree().create_timer(0.5, false).timeout
+	if not is_instance_valid(spawner): return
+	rm.camera.BeginLerp("home")
+	await get_tree().create_timer(0.6, false).timeout
+	if not is_instance_valid(spawner) or batch != _shell_batch_id: return
+	rm.perm.SetStackInvalidIndicators()
+	rm.cursor.SetCursor(true, true)
+	rm.perm.SetIndicators(true)
+	rm.perm.SetInteractionPermissions(true)
+	rm.SetupDeskUI()
+	_shell_replay_busy = false

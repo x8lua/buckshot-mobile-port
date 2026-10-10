@@ -141,7 +141,11 @@ func MainBatchSetup(dealerEnterAtStart : bool):
 	if resuming_mobile:
 		health_player = mobile_resume_health_player
 		health_opponent = mobile_resume_health_opponent
-		healthCounter.UpdateDisplay()
+		# _ready hides the dealer and DisableCounter hides all counter UI.
+		# Restoring logical flags alone does not restore those scene states.
+		animator_dealer.play("dealer return to table")
+		animator_dealerHands.play("dealer hands on table cuffed" if dealerCuffed else "dealer hands on table")
+		await healthCounter.Bootup()
 	else:
 		healthCounter.SetupHealth()
 	lerping = true
@@ -157,6 +161,8 @@ func MainBatchSetup(dealerEnterAtStart : bool):
 			dealerAI.sequenceArray_knownShell = mobile_resume_known_shells.duplicate()
 			if dealerAI.sequenceArray_knownShell.size() != shellSpawner.sequenceArray.size():
 				dealerAI.sequenceArray_knownShell.resize(shellSpawner.sequenceArray.size())
+			camera.BeginLerp("home")
+			await get_tree().create_timer(.8, false).timeout
 			BeginPlayerTurn()
 		else:
 			StartRound(false)

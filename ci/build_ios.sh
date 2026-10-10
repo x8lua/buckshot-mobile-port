@@ -14,6 +14,8 @@ fi
 grep -q 'TOUCH_RESULT PASS' build/evidence/touch-regression.log
 "$GODOT" --headless --path game --script res://mobile/pause_settings_test.gd -- --mobile-preview 2>&1 | tee build/evidence/pause-settings.log
 grep -q 'PAUSE_SETTINGS_RESULT PASS' build/evidence/pause-settings.log
+"$GODOT" --headless --path game --script res://mobile/original_lighting_test.gd -- --mobile-preview 2>&1 | tee build/evidence/original-lighting.log
+grep -q 'ORIGINAL_LIGHTING_RESULT PASS' build/evidence/original-lighting.log
 "$GODOT" --headless --path game --export-release iOS "$PWD/build/export/BuckshotMobile.zip" \
     2>&1 | tee build/evidence/export.log
 test -d build/export/BuckshotMobile.xcodeproj

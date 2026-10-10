@@ -39,7 +39,6 @@ func _ready():
 	get_viewport().size_changed.connect(_update_safe_area)
 	_update_safe_area()
 	Engine.max_fps = fps_limit
-	_apply_mobile_lighting.call_deferred()
 
 func _input(event):
 	if not enabled or _backgrounded:
@@ -324,22 +323,6 @@ func _set_quality(index: int):
 
 func _on_node_added(node: Node):
 	if node is Light3D: _apply_quality.call_deferred(node)
-
-func _apply_mobile_lighting():
-	var environment = get_tree().current_scene.find_child("WorldEnvironment", true, false) if is_instance_valid(get_tree().current_scene) else null
-	if environment is WorldEnvironment and environment.environment:
-		environment.environment.adjustment_enabled = true
-		environment.environment.adjustment_brightness = 1.18
-		environment.environment.adjustment_contrast = 1.08
-	var fill = get_tree().root.get_node_or_null("MobileFillLight")
-	if not fill:
-		fill = DirectionalLight3D.new()
-		fill.name = "MobileFillLight"
-		fill.rotation_degrees = Vector3(-48, -28, 0)
-		fill.light_color = Color(1.0, 0.92, 0.82)
-		fill.light_energy = 0.42
-		fill.shadow_enabled = false
-		get_tree().root.add_child(fill)
 
 func _apply_quality(node: Node):
 	if not is_instance_valid(node): return

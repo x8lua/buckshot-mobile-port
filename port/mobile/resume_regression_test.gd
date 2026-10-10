@@ -31,11 +31,13 @@ func run():
  check(rm.shellSpawner.sequenceArray == sequence,"remaining chamber preserved")
  if mobile.has_method("_can_replay_shells"):
   var dealer = rm.dealerAI.dealermesh_normal
-  check(dealer.get_active_material(0).emission_enabled and is_equal_approx(dealer.get_active_material(0).emission_energy_multiplier,0.065),"dealer face readable locally")
+  check(dealer.get_active_material(0).emission_enabled and is_equal_approx(dealer.get_active_material(0).emission_energy_multiplier,0.12),"dealer face readable locally")
+  check(rm.musicManager.speaker_music.playing and rm.musicManager.speaker_music.stream != null,"continue starts background music")
+  check(rm.musicManager.speaker_music.volume_db > -60,"continue music fade reaches audible volume")
   var shell = rm.shellSpawner.spawnedShellObjectArray[0].get_child(0)
   check(shell.mesh.get_active_material(1).shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED,"display shell color independent of environment")
   check(shell.mesh.get_active_material(1) != shell.mat_live,"shared original shell material untouched")
-  check(dealer.get_active_material(1).emission_enabled and is_equal_approx(dealer.get_active_material(1).emission_energy_multiplier,0.35),"teeth balanced against face")
+  check(dealer.get_active_material(1).emission_enabled and is_equal_approx(dealer.get_active_material(1).emission_energy_multiplier,0.50),"teeth balanced against face")
   var examine = current_scene.get_node("standalone managers/shell examine")
   for kind in ["live","blank"]:
    rm.shellSpawner.sequenceArray[0] = kind
@@ -53,14 +55,18 @@ func run():
   rm.animator_dealer.play("dealer fly away")
   await process_frame
   await process_frame
-  check(not visual.visible,"dealer hidden on shot/retreat animation")
+  check(visual.visible,"original recoil animation remains visible")
   await create_timer(0.5).timeout
   check(not visual.visible,"teleported dealer remains invisible at back")
   rm.animator_dealer.play("dealer return to table")
   await process_frame
-  check(not visual.visible,"dealer stays hidden while returning from back")
-  await create_timer(2.2).timeout
-  check(visual.visible,"dealer reappears only at table")
+  check(visual.visible and dealer.get_active_material(0).emission_energy_multiplier < 0.005,"dealer starts return in darkness")
+  await create_timer(1.0).timeout
+  var halfway_energy = dealer.get_active_material(0).emission_energy_multiplier
+  check(halfway_energy > 0.005 and halfway_energy < 0.10,"dealer gradually emerges during original movement")
+  check(visual.position.x > 20.6857 and visual.position.x < 25.9599,"dealer is moving toward table mid-return")
+  await create_timer(1.2).timeout
+  check(visual.visible and is_equal_approx(dealer.get_active_material(0).emission_energy_multiplier,0.12),"dealer fully visible at table")
   check(mobile._can_replay_shells(),"one replay available on restored table")
   var cam = rm.camera.cam
   var panel = mobile._shell_panel

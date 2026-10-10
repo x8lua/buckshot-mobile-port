@@ -421,6 +421,9 @@ var _shell_batch_id := 0
 var _shell_replay_available := false
 var _shell_replay_busy := false
 var _shell_display_sequence: Array = []
+var _dealer_animator: AnimationPlayer
+var _dealer_visual: Node3D
+var _dealer_readable_materials: Array = []
 
 func _brighten_mesh(mesh: MeshInstance3D, energy: float):
 	if not is_instance_valid(mesh) or mesh.mesh == null: return
@@ -455,14 +458,19 @@ func _readable_shell_mesh(mesh: MeshInstance3D):
 
 func _brighten_dealer(dealer: DealerIntelligence):
 	if not is_instance_valid(dealer): return
+	_dealer_readable_materials.clear()
 	for mesh in [dealer.dealermesh_normal, dealer.dealermesh_crushed]:
-		_brighten_mesh(mesh, 0.065)
+		_brighten_mesh(mesh, 0.12)
 		# Both original head meshes use surface 1 for grey teeth (Material.001).
 		var teeth = mesh.get_active_material(1).duplicate() as StandardMaterial3D
-		teeth.emission_energy_multiplier = 0.35
+		teeth.emission_energy_multiplier = 0.50
 		mesh.set_surface_override_material(1, teeth)
+		_dealer_readable_materials.append([mesh.get_active_material(0), 0.12])
+		_dealer_readable_materials.append([teeth, 0.50])
 	var animator = dealer.roundManager.animator_dealer
 	var visual = animator.get_parent() as Node3D
+	_dealer_animator = animator
+	_dealer_visual = visual
 	if not animator.has_meta("mobile_dealer_visibility"):
 		animator.set_meta("mobile_dealer_visibility", true)
 		animator.animation_started.connect(_dealer_animation_started.bind(visual))
@@ -481,12 +489,22 @@ func _preserve_shell_colors(pipeline: PipelineManager):
 
 func _dealer_animation_started(animation: StringName, visual: Node3D):
 	if not is_instance_valid(visual): return
-	if animation in [&"hide dealer", &"dealer fly away", &"dealer return to table"]:
+	if animation == &"hide dealer":
 		visual.visible = false
+	elif animation == &"dealer return to table":
+		visual.visible = true
+		_set_dealer_readability(0.0)
 
 func _dealer_animation_finished(animation: StringName, visual: Node3D):
 	if is_instance_valid(visual) and animation == &"dealer return to table":
 		visual.visible = true
+		_set_dealer_readability(1.0)
+	elif is_instance_valid(visual) and animation == &"dealer fly away":
+		visual.visible = false
+
+func _set_dealer_readability(amount: float):
+	for entry in _dealer_readable_materials:
+		entry[0].emission_energy_multiplier = entry[1] * amount
 
 func _attach_shell_replay(spawner: ShellSpawner):
 	if not is_instance_valid(spawner) or not spawner.spawnParent is MeshInstance3D: return
@@ -508,6 +526,13 @@ func _attach_shell_replay(spawner: ShellSpawner):
 
 func _process(_delta):
 	if not enabled: return
+	if is_instance_valid(_dealer_animator) and _dealer_animator.is_playing():
+		var animation = _dealer_animator.current_animation
+		if animation in ["dealer return to table", "dealer fly away"]:
+			var length = _dealer_animator.current_animation_length
+			var progress = clampf(_dealer_animator.current_animation_position / maxf(length, 0.001), 0, 1)
+			var amount = progress * progress if animation == "dealer return to table" else (1.0 - progress) * (1.0 - progress)
+			_set_dealer_readability(amount)
 	_update_shell_batch()
 	if is_instance_valid(_shell_examine) and _shell_examine.shellParent.visible:
 		_readable_shell_mesh(_shell_examine.mesh)

@@ -69,6 +69,10 @@ func _ready():
 
 func _resume_mobile_checkpoint():
 	await get_tree().create_timer(.15, false).timeout
+	var track = musicmanager.trackArray[roundManager.playerData.currentBatchIndex]
+	bpmlight.delay = track.bpmIncrement
+	musicmanager.LoadTrack_FadeIn()
+	bpmlight.BeginMainLoop()
 	BeginGame()
 
 var counting = false

@@ -69,5 +69,12 @@ void fragment() {
             local_saturation = max(saturation, 0.95);
         }
     }
-    COLOR = brightnessMatrix(brightness) * contrastMatrix(contrast) * saturationMatrix(local_saturation) * mix(c, c2, tint_effect_factor);
+    vec4 source = mix(c, c2, tint_effect_factor);
+    float output_brightness = brightness;
+    if (preserve_shell_colors) {
+        // Compatibility already renders a brighter scene; avoid adding grey to black.
+        source.rgb *= local_saturation > saturation ? 1.0 : 0.70;
+        output_brightness = brightness - 0.15;
+    }
+    COLOR = brightnessMatrix(output_brightness) * contrastMatrix(contrast) * saturationMatrix(local_saturation) * source;
 }

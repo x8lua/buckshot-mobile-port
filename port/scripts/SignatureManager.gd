@@ -79,7 +79,6 @@ func PickUpWaiver():
 	for intbr in intbranches : intbr.interactionAllowed = true
 	cursor.SetCursor(true, true)
 	btnParent_signature.visible = true
-	if MobileRuntime.enabled: MobileRuntime.begin_name_entry(self)
 	if (cursor.controller_active): btn_signature_a.grab_focus()
 	controller.previousFocus = btn_signature_a
 

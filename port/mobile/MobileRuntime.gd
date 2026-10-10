@@ -3,7 +3,7 @@ extends CanvasLayer
 var enabled = OS.has_feature("ios") or OS.has_feature("mobile_demo") or OS.get_cmdline_user_args().has("--mobile-preview")
 var valid_tap = false
 var quality = 1
-var fps_limit = 30
+var fps_limit = 60
 var _fingers = {}
 var _finger = -1
 var _origin = Vector2.ZERO
@@ -16,10 +16,6 @@ var _resume_button: Button
 var _safe_bounds = Rect2(Vector2.ZERO, Vector2(960, 540))
 var _backgrounded = false
 var _was_paused = false
-var _name_dialog: ConfirmationDialog
-var _name_edit: LineEdit
-var _name_error: Label
-var _signature: Node
 var _translation_controls = {}
 const SETTINGS_PATH = "user://buckshot_mobile.cfg"
 const CHECKPOINT_PATH = "user://buckshot_mobile_checkpoint.shell"
@@ -166,26 +162,6 @@ func _build_controls():
 	column.add_child(fps_label)
 	_inline_choices(column, ["30", "60"], 0 if fps_limit == 30 else 1, _set_fps)
 	_command(column, "MAIN MENU", _return_to_menu)
-	_name_dialog = ConfirmationDialog.new()
-	_localize(_name_dialog, "NAME")
-	_name_dialog.initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_PRIMARY_SCREEN
-	_name_dialog.dialog_hide_on_ok = false
-	_name_dialog.size = Vector2i(360, 160)
-	_name_dialog.confirmed.connect(_submit_name)
-	_name_dialog.canceled.connect(func():
-		if _name_edit.has_focus(): _name_edit.release_focus()
-		if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD): DisplayServer.virtual_keyboard_hide())
-	add_child(_name_dialog)
-	var name_column = VBoxContainer.new()
-	_name_dialog.add_child(name_column)
-	_name_edit = LineEdit.new()
-	_name_edit.max_length = 6
-	_name_edit.virtual_keyboard_enabled = true
-	_name_edit.custom_minimum_size = Vector2(340, 48)
-	_name_edit.text_submitted.connect(func(_text): _submit_name())
-	name_column.add_child(_name_edit)
-	_name_error = Label.new()
-	name_column.add_child(_name_error)
 
 func _command(parent: Node, label: String, action: Callable) -> Button:
 	var button = Button.new()
@@ -378,7 +354,7 @@ func _load_settings():
 	var settings = ConfigFile.new()
 	if settings.load(SETTINGS_PATH) != OK: return
 	quality = clampi(int(settings.get_value("video", "quality", 1)), 0, 1)
-	fps_limit = 60 if int(settings.get_value("video", "fps", 30)) == 60 else 30
+	fps_limit = 60 if int(settings.get_value("video", "fps", 60)) == 60 else 30
 
 func _save_settings():
 	var settings = ConfigFile.new()
@@ -396,32 +372,6 @@ func configure_menu(menu: Node):
 		menu.buttons_options[index].ui.hide()
 	menu.optionmanager.ui_windowed.hide()
 	menu.optionmanager.ui_fullscreen.hide()
-
-func begin_name_entry(signature: Node):
-	_signature = signature
-	_name_edit.text = ""
-	_name_error.text = ""
-	_name_dialog.popup_centered()
-	_name_dialog.position.y = int(_safe_bounds.position.y + 64)
-	_name_edit.grab_focus.call_deferred()
-
-func _submit_name():
-	if not is_instance_valid(_signature):
-		_name_dialog.hide()
-		return
-	var name_text = _name_edit.text.strip_edges().to_lower()
-	var valid = not name_text.is_empty() and name_text.length() <= 6 and name_text not in ["god", "dealer"]
-	for character in name_text:
-		if character < "a" or character > "z": valid = false
-	if not valid:
-		_name_error.text = tr("INVALID NAME")
-		return
-	while _signature.markerIndex > 0: _signature.Input_Backspace()
-	for character in name_text: _signature.GetInput(character, "")
-	_signature.GetInput("", "enter")
-	_name_dialog.hide()
-	_name_edit.release_focus()
-	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD): DisplayServer.virtual_keyboard_hide()
 
 func _localize(control: Node, key: String):
 	_translation_controls[control] = key
@@ -604,13 +554,14 @@ func _set_dealer_readability(amount: float):
 func _attach_shell_replay(spawner: ShellSpawner):
 	if not is_instance_valid(spawner) or not spawner.spawnParent is MeshInstance3D: return
 	_shell_spawner = spawner
-	# Keep the original lower table edge while including the dealer for direct taps.
+	# Frame the dealer and tabletop with the original lens instead of a wide FOV.
 	var camera = spawner.roundManager.camera
 	for index in camera.socketArray.size():
 		if camera.socketArray[index].socketName == "home":
 			var socket = camera.socketArray[index].duplicate()
-			socket.rot.x = -39.0
-			socket.fov = 86.0
+			socket.rot.x = -32.0
+			socket.pos += Vector3(-3.0, 1.0, 0.0)
+			socket.fov = 65.5
 			camera.socketArray[index] = socket
 	_abandoning = false
 	_abandon_stage = ""

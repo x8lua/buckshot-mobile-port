@@ -531,7 +531,7 @@ func _process(_delta):
 		if animation in ["dealer return to table", "dealer fly away"]:
 			var length = _dealer_animator.current_animation_length
 			var progress = clampf(_dealer_animator.current_animation_position / maxf(length, 0.001), 0, 1)
-			var amount = progress * progress if animation == "dealer return to table" else (1.0 - progress) * (1.0 - progress)
+			var amount = progress if animation == "dealer return to table" else 1.0 - progress
 			_set_dealer_readability(amount)
 	_update_shell_batch()
 	if is_instance_valid(_shell_examine) and _shell_examine.shellParent.visible:

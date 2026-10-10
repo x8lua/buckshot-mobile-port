@@ -135,28 +135,13 @@ func _build_controls():
 	var quality_label = Label.new()
 	_localize(quality_label, "QUALITY")
 	column.add_child(quality_label)
-	var quality_selector = OptionButton.new()
-	quality_selector.add_item(tr("LOW"))
-	quality_selector.add_item(tr("STANDARD"))
-	quality_selector.selected = quality
-	quality_selector.set_meta("mobile_option_keys", ["LOW", "STANDARD"])
-	_translation_controls[quality_selector] = ""
-	quality_selector.custom_minimum_size.y = 48
-	quality_selector.item_selected.connect(_set_quality)
-	column.add_child(quality_selector)
+	# Keep settings inside the paused canvas: PopupMenu is a separate Window
+	# and can capture touch releases away from this runtime's mouse bridge.
+	_inline_choices(column, ["LOW", "STANDARD"], quality, _set_quality)
 	var fps_label = Label.new()
 	fps_label.text = "FPS"
 	column.add_child(fps_label)
-	var fps_selector = OptionButton.new()
-	fps_selector.add_item("30")
-	fps_selector.add_item("60")
-	fps_selector.selected = 0 if fps_limit == 30 else 1
-	fps_selector.custom_minimum_size.y = 48
-	fps_selector.item_selected.connect(func(index):
-		fps_limit = 30 if index == 0 else 60
-		Engine.max_fps = fps_limit
-		_save_settings())
-	column.add_child(fps_selector)
+	_inline_choices(column, ["30", "60"], 0 if fps_limit == 30 else 1, _set_fps)
 	_command(column, "MAIN MENU", _return_to_menu)
 	_name_dialog = ConfirmationDialog.new()
 	_localize(_name_dialog, "NAME")
@@ -187,6 +172,29 @@ func _command(parent: Node, label: String, action: Callable) -> Button:
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
+
+func _inline_choices(parent: Node, labels: Array, selected: int, action: Callable):
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	parent.add_child(row)
+	var group = ButtonGroup.new()
+	group.allow_unpress = false
+	for index in labels.size():
+		var button = Button.new()
+		_localize(button, labels[index])
+		button.toggle_mode = true
+		button.button_group = group
+		button.button_pressed = index == selected
+		button.custom_minimum_size.y = 48
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 20)
+		button.pressed.connect(action.bind(index))
+		row.add_child(button)
+
+func _set_fps(index: int):
+	fps_limit = 30 if index == 0 else 60
+	Engine.max_fps = fps_limit
+	_save_settings()
 
 func _toggle_pause():
 	_reset_touches()

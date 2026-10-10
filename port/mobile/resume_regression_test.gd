@@ -2,6 +2,7 @@ extends SceneTree
 var failures = []
 var backup: PackedByteArray
 var existed = false
+var replay_show_observed = false
 func _initialize(): run.call_deferred()
 func check(value, label):
  print("CHECK ",label," ","PASS" if value else "FAIL")
@@ -76,13 +77,15 @@ func run():
   var panel = mobile._shell_panel
   var pos = cam.unproject_position(panel.get_child(0).global_position)
   print("PANEL_TOUCH ",pos," viewport=",root.size)
+  rm.shellSpawner.anim_compartment.animation_started.connect(func(animation):
+   if animation == &"show shells": replay_show_observed = true)
   var press = InputEventScreenTouch.new(); press.index=0; press.position=pos; press.pressed=true
   root.push_input(press,true)
   var release = InputEventScreenTouch.new(); release.index=0; release.position=pos; release.pressed=false
   root.push_input(release,true)
   check(mobile._shell_replay_busy and not mobile._shell_replay_available,"touch on actual panel consumes once")
   await create_timer(0.8).timeout
-  check(rm.shellSpawner.anim_compartment.current_animation == "show shells","original show shells animation replayed")
+  check(replay_show_observed,"original show shells animation replayed")
   paused=true
   await create_timer(0.3,true).timeout
   check(mobile._shell_replay_busy,"pause does not complete replay timers")
